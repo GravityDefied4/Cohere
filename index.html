@@ -234,8 +234,18 @@
                     <button id="btn-menu-toggle" class="icon-btn" aria-label="Toggle menu">☰</button>
                     <h1 id="page-title">Overview</h1><span id="role-pill" class="pill">Administrator</span>
                     <div class="header-controls">
-                        <div class="select-pill user-pill" title="Signed in account"><span class="dot" id="viewing-dot"></span><span
-                                id="user-name" class="user-name"></span>
+                        <!-- Organization dropdown: switch between the organizations you belong to -->
+                        <div class="org-switch" id="org-switch">
+                            <button type="button" class="org-switch-btn" id="org-switch-btn" aria-haspopup="listbox"
+                                aria-expanded="false" aria-controls="org-switch-list" aria-label="Switch organization">
+                                <span class="org-orb" id="org-switch-orb" aria-hidden="true"></span>
+                                <span class="org-switch-name" id="org-switch-name">No organization</span>
+                                <svg class="ic chev" aria-hidden="true">
+                                    <use href="#i-chev" />
+                                </svg>
+                            </button>
+                            <div class="org-switch-list" id="org-switch-list" role="listbox" aria-label="Your organizations"
+                                hidden></div>
                         </div>
                         <button type="button" id="btn-theme" class="icon-btn theme-toggle js-theme"
                             aria-label="Switch to dark mode" title="Toggle dark mode"><svg class="ic i-moon"
@@ -277,6 +287,7 @@
                     <section class="view" id="view-members" hidden>
                         <!-- Organization picker (wireframe: org card with dropdown) -->
                         <div class="org-picker" id="org-picker">
+                            <div class="org-picker-head">
                             <button type="button" class="org-picker-btn" id="org-picker-btn" aria-expanded="false"
                                 aria-controls="org-picker-list">
                                 <span class="org-orb" id="org-picker-orb" aria-hidden="true"></span>
@@ -286,11 +297,11 @@
                                     <use href="#i-chev" />
                                 </svg>
                             </button>
+                            <!-- "..." actions for the selected organization (Admin: everything; President: edit logo) -->
+                            <div class="org-picker-actions" id="org-detail" hidden></div>
+                            </div>
                             <ul class="org-picker-list" id="org-picker-list" hidden></ul>
                         </div>
-
-                        <!-- Options (Admin: everything; President: edit logo) -->
-                        <div class="org-bar" id="org-detail" hidden></div>
 
                         <!-- Add / edit organization (Admin: all fields; President: logo only) -->
                         <section class="form-panel" id="org-panel" hidden>

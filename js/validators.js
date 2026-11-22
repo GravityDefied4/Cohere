@@ -57,15 +57,16 @@ Cohere.Validators = (function () {
             errors["member-fullName"] = "Enter a valid full name.";
         }
 
-        // Student ID: required, /^[A-Za-z0-9-]{4,20}$/, unique
+        // Student ID: required. The same student can belong to several organizations,
+        // but only once to each one.
         if (!studentId || !isStudentId(studentId)) {
             errors["member-studentId"] = "Use the format 24-1234-123.";
         } else {
             const duplicate = window.Cohere.state.members.some(function (m) {
-                return m.id !== editingId && m.studentId === studentId;
+                return m.id !== editingId && m.studentId === studentId && m.orgId === orgId;
             });
             if (duplicate) {
-                errors["member-studentId"] = "This student ID is already registered.";
+                errors["member-studentId"] = "This student is already a member of this organization.";
             }
         }
 

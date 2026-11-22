@@ -8,20 +8,11 @@ Cohere.Members = (function () {
     const el = function (tag, props, kids) { return Cohere.Utils.createEl(tag, props, kids); };
     let selectedOrgId = "";
 
-    // Organizations the signed-in person may see: Admin sees all, others only their own
-    function visibleOrgs() {
-        const actor = Cohere.Permissions.getActor();
-        const orgs = window.Cohere.state.organizations;
-        if (actor.isAdmin) return orgs;
-        return orgs.filter(function (o) { return o.id === actor.orgId; });
-    }
+    // Organizations the signed-in person may see: Admin sees all, others the ones they belong to
+    function visibleOrgs() { return Cohere.Permissions.getAvailableOrgs(); }
 
-    function ensureSelection() {
-        const orgs = visibleOrgs();
-        if (!orgs.some(function (o) { return o.id === selectedOrgId; })) {
-            selectedOrgId = orgs.length ? orgs[0].id : "";
-        }
-    }
+    // The organization shown here is the one chosen in the header dropdown (the "active" organization)
+    function ensureSelection() { selectedOrgId = Cohere.Permissions.getActiveOrgId(); }
 
     function selectedOrg() { return Cohere.Store.getOrg(selectedOrgId); }
 
@@ -31,12 +22,13 @@ Cohere.Members = (function () {
         $("org-picker-list").addEventListener("click", function (e) {
             const item = e.target.closest("[data-org]");
             if (!item) return;
-            selectedOrgId = item.dataset.org;
             togglePicker(false);
             resetMemberForm();
             Cohere.Layout.closePanel("member-panel");
             Cohere.Layout.closePanel("president-panel");
-            render();
+            // Same switch as the header dropdown, so the whole app follows the chosen organization
+            Cohere.Permissions.setActiveOrg(item.dataset.org);
+            Cohere.App.renderAll();
         });
         document.addEventListener("click", function (e) {
             if (!e.target.closest("#org-picker")) togglePicker(false);
@@ -52,8 +44,8 @@ Cohere.Members = (function () {
             if (!e.target.closest("#action-menu") && !e.target.closest(".kebab-btn")) closeActionMenu(false);
         });
         document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeActionMenu(true); });
-        window.addEventListener("resize", function () { closeActionMenu(false); });
-        window.addEventListener("scroll", function () { closeActionMenu(false); }, true);
+        window.addEventListener("resize", repositionActionMenu);
+        window.addEventListener("scroll", repositionActionMenu, true);
 
         // Organization form (Admin)
         $("org-form").addEventListener("submit", handleOrgSubmit);
@@ -253,21 +245,36 @@ Cohere.Members = (function () {
             }, [Cohere.UI.icon(it.icon), el("span", { textContent: it.label })]));
         });
 
-        // Place under the button, right edges aligned; flip above when there is no room below
         menu.style.visibility = "hidden";
         menu.hidden = false;
-        const r = anchor.getBoundingClientRect();
+        placeActionMenu();
+        menu.style.visibility = "";
+
+        anchor.setAttribute("aria-expanded", "true");
+        const first = menu.querySelector(".action-menu-item");
+        if (first) first.focus({ preventScroll: true });
+    }
+
+    // Place under the button, right edges aligned; flip above when there is no room below
+    function placeActionMenu() {
+        const menu = $("action-menu");
+        if (!menu || !menuAnchor) return;
+        const r = menuAnchor.getBoundingClientRect();
         const w = menu.offsetWidth, h = menu.offsetHeight;
         const left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
         let top = r.bottom + 6;
         if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
         menu.style.left = left + "px";
         menu.style.top = top + "px";
-        menu.style.visibility = "";
+    }
 
-        anchor.setAttribute("aria-expanded", "true");
-        const first = menu.querySelector(".action-menu-item");
-        if (first) first.focus({ preventScroll: true });
+    // The menu follows its button while the page scrolls; it closes once the button is out of view
+    function repositionActionMenu() {
+        const menu = $("action-menu");
+        if (!menu || menu.hidden || !menuAnchor) return;
+        const r = menuAnchor.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) { closeActionMenu(false); return; }
+        placeActionMenu();
     }
 
     function closeActionMenu(returnFocus) {
@@ -323,29 +330,21 @@ Cohere.Members = (function () {
         ];
     }
 
-    // Organization bar: president summary on the left, one "..." button on the right
+    // "..." button beside the organization card's arrow
     function renderOrgDetail() {
         const box = $("org-detail");
         if (!box) return;
         closeActionMenu(false);
         Cohere.Utils.clearEl(box);
         const org = selectedOrg();
-        const isAdmin = Cohere.Permissions.can("manageOrgs");
-        const pres = org ? Cohere.Store.getPresident(org.id) : null;
 
         const hasActions = orgMenuItems().length > 0;
         box.hidden = !hasActions;
         if (!hasActions) return;
 
-        if (org && isAdmin) {
-            const count = window.Cohere.state.members.filter(function (m) { return m.orgId === org.id; }).length;
-            box.appendChild(el("p", { className: "org-detail-line" }, [
-                el("strong", { textContent: "President: " }),
-                pres ? pres.fullName + " (" + pres.studentId + ")" : "Not assigned yet",
-                " · " + count + " member" + (count !== 1 ? "s" : "")
-            ]));
-        }
-        box.appendChild(kebabButton("Organization actions", { id: "org-menu-btn" }));
+        // Sits beside the arrow of the organization card: these actions apply to the selected organization
+        const label = org ? "Actions for " + org.name : "Organization actions";
+        box.appendChild(kebabButton(label, { id: "org-menu-btn", title: label }));
     }
 
     function openPresidentForm() {
@@ -407,7 +406,7 @@ Cohere.Members = (function () {
 
         const result = editingId ? Cohere.Store.updateOrg(editingId, values) : Cohere.Store.addOrg(values);
         if (!result.ok) { Cohere.UI.showToast(result.error, "error"); return; }
-        if (!editingId) selectedOrgId = result.data.id;
+        if (!editingId) Cohere.Permissions.setActiveOrg(result.data.id);
 
         // Save the logo chosen in the form (a new organization only needs it when one was picked)
         if (pendingLogo !== undefined && (editingId || pendingLogo)) {
@@ -623,5 +622,5 @@ Cohere.Members = (function () {
         });
     }
 
-    return { init, render, renderMemberTable };
+    return { init, render, renderMemberTable, applyOrb, resetMemberForm };
 })();

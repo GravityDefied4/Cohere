@@ -132,23 +132,37 @@
     height: 72px;
 }
 
-/* Options bar: president summary on the left, Options menu on the right */
-.org-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin: 0 0 22px;
+/* Organization card: the "..." actions sit right next to the arrow */
+.org-picker-head {
+    position: relative;
 }
 
-.org-bar[hidden] {
+/* "..." at the far right, the arrow just to its left; long names stay clear of both */
+.org-picker-btn .chev {
+    margin-right: 46px;
+}
+
+.org-picker-btn .org-picker-text {
+    padding-right: 90px;
+}
+
+.org-picker.single .org-picker-btn .org-picker-text {
+    padding-right: 48px;
+}
+
+.org-picker-actions {
+    position: absolute;
+    top: 50%;
+    right: 22px;
+    transform: translateY(-50%);
+}
+
+.org-picker.single .org-picker-actions {
+    right: 22px;
+}
+
+.org-picker-actions[hidden] {
     display: none;
-}
-
-.org-bar .org-detail-line {
-    margin: 0;
-    font-size: .9rem;
 }
 
 /* "..." action button + floating menu (organization bar and member rows) */
@@ -185,8 +199,7 @@
     outline-offset: 1px;
 }
 
-.org-bar .kebab-btn {
-    margin-left: auto;
+.org-picker-actions .kebab-btn {
     border-color: var(--ct-line, var(--line));
 }
 
@@ -291,7 +304,19 @@
         height: 56px;
     }
 
-    .org-bar {
-        align-items: stretch;
+    .org-picker-btn .org-picker-text {
+        padding-right: 84px;
+    }
+
+    .org-picker.single .org-picker-btn .org-picker-text {
+        padding-right: 44px;
+    }
+
+    .org-picker-actions {
+        right: 14px;
+    }
+
+    .org-picker.single .org-picker-actions {
+        right: 14px;
     }
 }

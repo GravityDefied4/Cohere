@@ -30,7 +30,10 @@ Cohere.Seed = (function () {
             { id: Cohere.Utils.generateId("mem"), fullName: "Ben Lopez", studentId: "22-1004-004", orgId: orgSC, role: "President", position: "President", status: "Active", yearSection: "4-B", email: "ben.004.stud@cdd.edu.ph", createdAt: lastWeek },
             { id: Cohere.Utils.generateId("mem"), fullName: "Carla Mendoza", studentId: "23-1005-005", orgId: orgSC, role: "Executive", position: "Treasurer", status: "Active", yearSection: "2-A", email: "carla.005.stud@cdd.edu.ph", createdAt: lastWeek },
             { id: Cohere.Utils.generateId("mem"), fullName: "David Tan", studentId: "23-1006-006", orgId: orgAC, role: "President", position: "President", status: "Active", yearSection: "2-B", email: "david.006.stud@cdd.edu.ph", createdAt: lastWeek },
-            { id: Cohere.Utils.generateId("mem"), fullName: "Elena Rivera", studentId: "24-1007-007", orgId: orgAC, role: "Member", position: "Representative", status: "Active", yearSection: "1-A", email: "elena.007.stud@cdd.edu.ph", createdAt: lastWeek }
+            { id: Cohere.Utils.generateId("mem"), fullName: "Elena Rivera", studentId: "24-1007-007", orgId: orgAC, role: "Member", position: "Representative", status: "Active", yearSection: "1-A", email: "elena.007.stud@cdd.edu.ph", createdAt: lastWeek },
+            // The same students can belong to more than one organization (one record per organization)
+            { id: Cohere.Utils.generateId("mem"), fullName: "Ben Lopez", studentId: "22-1004-004", orgId: orgAC, role: "Executive", position: "Vice President", status: "Active", yearSection: "4-B", email: "ben.004.stud@cdd.edu.ph", createdAt: lastWeek },
+            { id: Cohere.Utils.generateId("mem"), fullName: "Carla Mendoza", studentId: "23-1005-005", orgId: orgCS, role: "Member", position: "Member", status: "Active", yearSection: "2-A", email: "carla.005.stud@cdd.edu.ph", createdAt: lastWeek }
         ];
         const memMaria = members[0].id;
         const memJose = members[1].id;

@@ -121,6 +121,21 @@
         flex: 1;
     }
 
+    .org-switch {
+        flex: 1;
+    }
+
+    .org-switch-btn {
+        width: 100%;
+        max-width: none;
+    }
+
+    .org-switch-list {
+        right: auto;
+        left: 0;
+        width: min(340px, calc(100vw - 32px));
+    }
+
     .select-pill select {
         max-width: none;
         width: 100%;

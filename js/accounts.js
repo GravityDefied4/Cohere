@@ -70,15 +70,28 @@ Cohere.Accounts = (function () {
         }) || null;
     }
 
-    // The account that belongs to a member record (if any)
+    // Every membership (member record) of the person behind an account. A person who belongs
+    // to several organizations has one member record per organization, sharing a student ID.
+    function findMemberships(account) {
+        if (!account || isAdmin(account)) return [];
+        const members = (Cohere.state && Cohere.state.members) || [];
+        return members.filter(function (m) {
+            return (account.memberId && m.id === account.memberId) ||
+                (account.studentId && norm(m.studentId) === norm(account.studentId)) ||
+                (account.email && m.email && norm(m.email) === norm(account.email));
+        });
+    }
+
+    // The account that belongs to a member record (if any). Another membership of the same
+    // person (same student ID or email) resolves to the same account.
     function findForMember(member) {
         if (!member) return null;
-        return getActive().find(function (a) {
-            if (isAdmin(a)) return false;
-            if (a.memberId) return a.memberId === member.id;
-            return (a.email && norm(a.email) === norm(member.email)) ||
-                (a.studentId && norm(a.studentId) === norm(member.studentId));
-        }) || null;
+        const accounts = getActive().filter(function (a) { return !isAdmin(a); });
+        return accounts.find(function (a) { return a.memberId === member.id; }) ||
+            accounts.find(function (a) {
+                return (a.email && member.email && norm(a.email) === norm(member.email)) ||
+                    (a.studentId && norm(a.studentId) === norm(member.studentId));
+            }) || null;
     }
 
     // ---- Keeping accounts in step with members ------------------------------
@@ -101,6 +114,18 @@ Cohere.Accounts = (function () {
             email: member.email || "", studentId: member.studentId, memberId: member.id
         };
         if (existing) {
+            // Another membership of a person who already has an account: the account keeps the role,
+            // organization and member record it was created with. Only the shared details are updated.
+            const members = (Cohere.state && Cohere.state.members) || [];
+            const isOtherMembership = !!existing.memberId && existing.memberId !== member.id &&
+                members.some(function (m) { return m.id === existing.memberId; });
+            if (isOtherMembership) {
+                const shared = Object.assign({}, existing, {
+                    name: member.fullName, email: member.email || existing.email || "", studentId: member.studentId
+                });
+                upsertStored(shared);
+                return { account: shared, created: false };
+            }
             const updated = Object.assign({}, existing, fields);
             upsertStored(updated);
             return { account: updated, created: false };
@@ -117,6 +142,12 @@ Cohere.Accounts = (function () {
     function removeForMember(member) {
         const acc = findForMember(member);
         if (!acc) return;
+        // Still a member of another organization: the login stays
+        const members = (Cohere.state && Cohere.state.members) || [];
+        const otherMembership = members.some(function (m) {
+            return m.id !== member.id && norm(m.studentId) === norm(member.studentId);
+        });
+        if (otherMembership) return;
         const inFile = (Cohere.AccountData || []).some(function (a) { return a.username === acc.username; });
         const list = loadStored().filter(function (a) { return a.username !== acc.username; });
         if (inFile) list.push({ username: acc.username, disabled: true });
@@ -157,7 +188,7 @@ Cohere.Accounts = (function () {
     }
 
     return {
-        ADMIN_ROLE, authenticate, findByUsername, findMember, findForMember, isAdmin,
+        ADMIN_ROLE, authenticate, findByUsername, findMember, findMemberships, findForMember, isAdmin,
         syncMember, removeForMember, renameOrg, clearStored, exportSource,
         getSession, setSession, clearSession
     };

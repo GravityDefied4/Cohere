@@ -34,6 +34,11 @@ Cohere.Store = (function () {
         if (actor.isAdmin) return true;
         return memberIds.every(function (id) { const m = getMember(id); return m && m.orgId === actor.orgId; });
     }
+    // True when the member record is one of the signed-in person's own memberships
+    function isOwnMembership(id) {
+        const actor = Cohere.Permissions.getActor();
+        return actor.id === id || (actor.memberIds || []).indexOf(id) !== -1;
+    }
     const OTHER_ORG = "You can only manage data of your own organization.";
 
     function addOrg(values) {
@@ -112,8 +117,8 @@ Cohere.Store = (function () {
         const org = getOrg(orgId);
         if (!org) return { ok: false, error: "Organization not found." };
         const studentId = values.studentId.trim();
-        let person = window.Cohere.state.members.find(function (m) { return m.studentId === studentId; }) || null;
-        if (person && person.orgId !== orgId) return { ok: false, error: "That student ID is already registered in another organization." };
+        // A student can belong to several organizations: only a membership in THIS organization is promoted
+        let person = window.Cohere.state.members.find(function (m) { return m.studentId === studentId && m.orgId === orgId; }) || null;
 
         const old = getPresident(orgId);
         if (old && (!person || old.id !== person.id)) {
@@ -133,7 +138,8 @@ Cohere.Store = (function () {
         } else {
             person = { id: Cohere.Utils.generateId("mem"), fullName: values.fullName.trim(), studentId: studentId, orgId: orgId, role: "President", position: "President", status: "Active", yearSection: "", email: (values.email || "").trim(), createdAt: Cohere.Utils.todayISO() };
             window.Cohere.state.members.push(person);
-            created = Cohere.Accounts.syncMember(person, null);
+            // A student who already has an account (member of another organization) keeps it
+            created = Cohere.Accounts.syncMember(person, Cohere.Accounts.findForMember(person));
         }
         Cohere.Storage.saveAll();
         Cohere.Activity.log("member", "Assigned \"" + person.fullName + "\" as President of \"" + org.name + "\"");
@@ -148,7 +154,8 @@ Cohere.Store = (function () {
         const specific = (values.specificRole || "").trim();
         const member = { id: Cohere.Utils.generateId("mem"), fullName: values.fullName.trim(), studentId: values.studentId.trim(), orgId: values.orgId, role: role, position: specific || role, status: "Active", yearSection: "", email: (values.email || "").trim(), createdAt: Cohere.Utils.todayISO() };
         window.Cohere.state.members.push(member);
-        const synced = Cohere.Accounts.syncMember(member, null);
+        // A student who already has an account (member of another organization) keeps it
+        const synced = Cohere.Accounts.syncMember(member, Cohere.Accounts.findForMember(member));
         Cohere.Storage.saveAll();
         Cohere.Activity.log("member", "Added " + role + " \"" + member.fullName + "\"");
         return { ok: true, data: member, account: synced.account, created: synced.created };
@@ -178,7 +185,7 @@ Cohere.Store = (function () {
         const member = getMember(id);
         if (!member) return { ok: false, error: "Member not found." };
         if (!Cohere.Permissions.canManageMember(member)) return { ok: false, error: memberDenied(member) };
-        if (Cohere.Permissions.getActor().id === id) return { ok: false, error: "You cannot deactivate your own account." };
+        if (isOwnMembership(id)) return { ok: false, error: "You cannot deactivate your own account." };
         if (!Cohere.Config.MEMBER_STATUSES.includes(status)) return { ok: false, error: "Invalid status." };
         member.status = status;
         Cohere.Storage.saveAll();
@@ -190,7 +197,7 @@ Cohere.Store = (function () {
         const member = getMember(id);
         if (!member) return { ok: false, error: "Member not found." };
         if (!Cohere.Permissions.canManageMember(member)) return { ok: false, error: memberDenied(member) };
-        if (Cohere.Permissions.getActor().id === id) return { ok: false, error: "You cannot delete the member record of the account you are signed in with." };
+        if (isOwnMembership(id)) return { ok: false, error: "You cannot delete the member record of the account you are signed in with." };
         const memberTasks = window.Cohere.state.tasks.filter(function (t) { return t.assigneeId === id; });
         window.Cohere.state.tasks = window.Cohere.state.tasks.filter(function (t) { return t.assigneeId !== id; });
         window.Cohere.state.appointments.forEach(function (appt) { appt.memberIds = appt.memberIds.filter(function (mid) { return mid !== id; }); });

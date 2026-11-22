@@ -118,8 +118,6 @@ Cohere.App = (function () {
 
     // Renders all views and UI components
     function renderAll() {
-        if (Cohere.Permissions) Cohere.Permissions.renderUser();
-
         const views = ["Dashboard", "Members", "Tasks", "Appointments", "Attendance", "Performance", "ActivityView", "Settings"];
         views.forEach(function (v) {
             if (Cohere[v] && typeof Cohere[v].render === "function") Cohere[v].render();

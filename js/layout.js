@@ -59,8 +59,8 @@ Cohere.Layout = (function () {
         }
         const account = Cohere.Accounts.authenticate(id, pw);
         if (!account) { err.textContent = "Incorrect email/student ID or password."; err.hidden = false; return; }
-        const linked = Cohere.Accounts.findMember(account);
-        if (linked && linked.status === "Inactive") { err.textContent = "This account is inactive. Please contact your organization president."; err.hidden = false; return; }
+        const linked = Cohere.Accounts.findMemberships(account);
+        if (linked.length && linked.every(function (m) { return m.status === "Inactive"; })) { err.textContent = "This account is inactive. Please contact your organization president."; err.hidden = false; return; }
         Cohere.Permissions.signIn(account);
         $("login-id").value = "";
         $("login-pw").value = "";
@@ -98,8 +98,113 @@ Cohere.Layout = (function () {
         const actor = Cohere.Permissions.getActor();
         $("role-pill").textContent = actor.role || "Guest";
         $("avatar").textContent = (actor.name || "A").trim().charAt(0).toUpperCase();
+        renderOrgSwitch();
+    }
+
+    // ---- Organization dropdown (header) --------------------------------------
+    // Lists the organizations the person belongs to (Admin: all of them) with a short summary of each.
+    // Choosing one switches the whole app to that organization, and the role pill shows the role held there.
+    function orgSwitchMeta(org) {
+        const count = window.Cohere.state.members.filter(function (m) { return m.orgId === org.id; }).length;
+        const countText = count + " member" + (count !== 1 ? "s" : "");
+        if (Cohere.Permissions.getActor().isAdmin) {
+            const pres = Cohere.Store.getPresident(org.id);
+            return (pres ? "President: " + pres.fullName : "No president yet") + " · " + countText;
+        }
+        const mine = Cohere.Permissions.getMemberships().find(function (m) { return m.orgId === org.id; });
+        let role = "";
+        if (mine) role = mine.position && mine.position !== mine.role ? mine.role + " · " + mine.position : mine.role;
+        return (role ? "You: " + role + " · " : "") + countText;
+    }
+
+    function renderOrgSwitch() {
+        const root = $("org-switch");
+        if (!root) return;
+        const orgs = Cohere.Permissions.getAvailableOrgs();
+        const activeId = Cohere.Permissions.getActiveOrgId();
+        const active = orgs.find(function (o) { return o.id === activeId; }) || null;
+        const el = Cohere.Utils.createEl;
+
+        $("org-switch-name").textContent = active ? active.name : "No organization";
+        Cohere.Members.applyOrb($("org-switch-orb"), active);
+        $("org-switch-btn").disabled = orgs.length === 0;
+        root.classList.toggle("is-empty", orgs.length === 0);
+
+        const list = $("org-switch-list");
+        Cohere.Utils.clearEl(list);
+        orgs.forEach(function (o) {
+            const selected = o.id === activeId;
+            const orb = el("span", { className: "org-orb", "aria-hidden": "true" });
+            Cohere.Members.applyOrb(orb, o);
+            const item = el("button", {
+                type: "button", role: "option", className: "org-switch-item" + (selected ? " is-selected" : ""),
+                "aria-selected": String(selected), dataset: { org: o.id }
+            }, [
+                orb,
+                el("span", { className: "org-switch-text" }, [
+                    el("strong", { textContent: o.name }),
+                    el("span", { className: "org-switch-desc", textContent: o.description || "No description" }),
+                    el("span", { className: "org-switch-meta", textContent: orgSwitchMeta(o) })
+                ]),
+                selected ? Cohere.UI.icon("check") : null
+            ]);
+            list.appendChild(item);
+        });
+        toggleOrgSwitch(false);
+    }
+
+    function toggleOrgSwitch(force) {
+        const list = $("org-switch-list"), btn = $("org-switch-btn");
+        if (!list || !btn) return;
+        const open = (typeof force === "boolean" ? force : list.hidden) && list.children.length > 0;
+        list.hidden = !open;
+        btn.setAttribute("aria-expanded", String(open));
+        $("org-switch").classList.toggle("open", open);
+        if (open) {
+            const sel = list.querySelector(".is-selected") || list.firstElementChild;
+            if (sel) sel.focus({ preventScroll: true });
+        }
+    }
+
+    function chooseOrg(id) {
+        toggleOrgSwitch(false);
+        if (id === Cohere.Permissions.getActiveOrgId()) { $("org-switch-btn").focus(); return; }
+        if (!Cohere.Permissions.setActiveOrg(id)) return;
+        // Forms in progress belong to the organization we just left
+        closeAllPanels();
+        if (Cohere.Members && Cohere.Members.resetMemberForm) Cohere.Members.resetMemberForm();
+        Cohere.App.renderAll();
+        const org = Cohere.Store.getOrg(id);
+        Cohere.UI.showToast("Now viewing " + (org ? org.name : "organization") + ".", "info");
+        $("org-switch-btn").focus();
+    }
+
+    function initOrgSwitch() {
+        $("org-switch-btn").addEventListener("click", function () { toggleOrgSwitch(); });
+        $("org-switch-list").addEventListener("click", function (e) {
+            const item = e.target.closest("[data-org]");
+            if (item) chooseOrg(item.dataset.org);
+        });
+        document.addEventListener("click", function (e) { if (!e.target.closest("#org-switch")) toggleOrgSwitch(false); });
+        document.addEventListener("keydown", function (e) {
+            const list = $("org-switch-list");
+            if (!list) return;
+            if (e.key === "Escape" && !list.hidden) { toggleOrgSwitch(false); $("org-switch-btn").focus(); return; }
+            const keys = ["ArrowDown", "ArrowUp", "Home", "End"];
+            if (keys.indexOf(e.key) === -1 || !e.target.closest("#org-switch")) return;
+            e.preventDefault();
+            if (list.hidden) { toggleOrgSwitch(true); return; }
+            const items = Array.prototype.slice.call(list.querySelectorAll(".org-switch-item"));
+            const at = items.indexOf(document.activeElement);
+            const next = e.key === "Home" ? 0 : e.key === "End" ? items.length - 1 :
+                e.key === "ArrowDown" ? (at + 1) % items.length : (at - 1 + items.length) % items.length;
+            items[next].focus();
+        });
     }
     function onView(name) {
+        // The Organization tab has its own organization picker, so the header dropdown is hidden there
+        const sw = $("org-switch");
+        if (sw) { toggleOrgSwitch(false); sw.hidden = name === "members"; }
         $("page-title").textContent = TITLES[name] || "Cohere";
         document.title = (TITLES[name] || "Cohere") + " · Cohere";
         closeAllPanels();
@@ -141,6 +246,7 @@ Cohere.Layout = (function () {
 
     function init() {
         initTheme();
+        initOrgSwitch();
         $("login-form").addEventListener("submit", handleLogin);
         $("btn-logout").addEventListener("click", openLogoutDialog);
         $("logout-cancel").addEventListener("click", closeLogoutDialog);

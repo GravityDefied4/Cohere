@@ -94,7 +94,8 @@ Cohere.Notify = (function () {
             return window.Cohere.state.notifications;
         }
         return window.Cohere.state.notifications.filter(function (n) {
-            return n.memberId === actor.id || n.memberId === null;
+            // a person sees notifications for every organization they belong to
+            return n.memberId === null || n.memberId === actor.id || (actor.memberIds || []).indexOf(n.memberId) !== -1;
         });
     }
 
