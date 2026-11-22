@@ -167,11 +167,13 @@ Cohere.Validators = (function () {
         const date = (values.date || "").trim();
         const startTime = (values.startTime || "").trim();
         const endTime = (values.endTime || "").trim();
+        const meetingType = values.meetingType || "In-person";
         const location = (values.location || "").trim();
+        const meetingLink = (values.meetingLink || "").trim();
         const memberIds = values.memberIds || [];
 
         if (!title || title.length < 3 || title.length > 80) {
-            errors["appt-title"] = "Meeting title is required (3–80 characters).";
+            errors["appt-title"] = "Event title is required (3–80 characters).";
         }
         if (!date || !Cohere.Utils.isValidISODate(date)) {
             errors["appt-date"] = "Enter a valid date.";
@@ -193,9 +195,22 @@ Cohere.Validators = (function () {
         } else if (startTime && endTime <= startTime) {
             errors["appt-end"] = "End time must be after start time.";
         }
-        if (!location || location.length < 2 || location.length > 60) {
-            errors["appt-location"] = "Enter the meeting location.";
+
+        // Validate location or meeting link based on type
+        if (meetingType === "Online") {
+            if (!meetingLink) {
+                errors["appt-meetingLink"] = "Enter a meeting link.";
+            } else if (meetingLink.length > 200) {
+                errors["appt-meetingLink"] = "Meeting link is too long (max 200).";
+            } else if (!/^https?:\/\/.+/i.test(meetingLink)) {
+                errors["appt-meetingLink"] = "Enter a valid URL (starts with http:// or https://).";
+            }
+        } else {
+            if (!location || location.length < 2 || location.length > 60) {
+                errors["appt-location"] = "Enter the event location.";
+            }
         }
+
         if (!memberIds || memberIds.length < 2) {
             errors["appt-members"] = "Invite at least two officers.";
         } else {
@@ -204,6 +219,6 @@ Cohere.Validators = (function () {
         }
         return { valid: Object.keys(errors).length === 0, errors: errors };
     }
-
+    
     return { validateOrg, validateMember, validateTask, validateAppointment };
 })();

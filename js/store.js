@@ -137,7 +137,9 @@ Cohere.Store = (function () {
             date: values.date,
             startTime: values.startTime,
             endTime: values.endTime,
-            location: values.location.trim(),
+            meetingType: values.meetingType || "In-person",
+            location: values.meetingType === "In-person" ? values.location.trim() : "",
+            meetingLink: values.meetingType === "Online" ? values.meetingLink.trim() : "",
             memberIds: values.memberIds.slice(),
             notes: (values.notes || "").trim(),
             status: "Scheduled",
@@ -146,7 +148,7 @@ Cohere.Store = (function () {
         window.Cohere.state.appointments.push(appt);
         Cohere.Storage.saveAll();
         const inviteeNames = appt.memberIds.map(getMemberName).join(", ");
-        Cohere.Activity.log("appointment", "Scheduled meeting \"" + appt.title + "\" with " + inviteeNames);
+        Cohere.Activity.log("appointment", "Scheduled event \"" + appt.title + "\" with " + inviteeNames);
         appt.memberIds.forEach(function (memberId) {
             Cohere.Notify.add("meeting", "You are invited to \"" + appt.title + "\" on " + Cohere.Utils.formatDate(appt.date), memberId, appt.id);
         });
@@ -157,17 +159,19 @@ Cohere.Store = (function () {
     function updateAppointment(id, values) {
         if (!Cohere.Permissions.can("manageMeetings")) return { ok: false, error: Cohere.Permissions.denyMessage("manageMeetings") };
         const appt = getAppointment(id);
-        if (!appt) return { ok: false, error: "Meeting not found." };
+        if (!appt) return { ok: false, error: "Event not found." };
         const oldMemberIds = appt.memberIds.slice();
         appt.title = values.title.trim();
         appt.date = values.date;
         appt.startTime = values.startTime;
         appt.endTime = values.endTime;
-        appt.location = values.location.trim();
+        appt.meetingType = values.meetingType || "In-person";
+        appt.location = values.meetingType === "In-person" ? values.location.trim() : "";
+        appt.meetingLink = values.meetingType === "Online" ? values.meetingLink.trim() : "";
         appt.memberIds = values.memberIds.slice();
         appt.notes = (values.notes || "").trim();
         Cohere.Storage.saveAll();
-        Cohere.Activity.log("appointment", "Updated meeting \"" + appt.title + "\"");
+        Cohere.Activity.log("appointment", "Updated event \"" + appt.title + "\"");
         const newInvitees = appt.memberIds.filter(function (mid) { return !oldMemberIds.includes(mid); });
         newInvitees.forEach(function (memberId) {
             Cohere.Notify.add("meeting", "You are invited to \"" + appt.title + "\" on " + Cohere.Utils.formatDate(appt.date), memberId, appt.id);
@@ -179,13 +183,13 @@ Cohere.Store = (function () {
     function cancelAppointment(id) {
         if (!Cohere.Permissions.can("manageMeetings")) return { ok: false, error: Cohere.Permissions.denyMessage("manageMeetings") };
         const appt = getAppointment(id);
-        if (!appt) return { ok: false, error: "Meeting not found." };
-        if (appt.status === "Cancelled") return { ok: false, error: "Meeting is already cancelled." };
+        if (!appt) return { ok: false, error: "Event not found." };
+        if (appt.status === "Cancelled") return { ok: false, error: "Event is already cancelled." };
         appt.status = "Cancelled";
         Cohere.Storage.saveAll();
-        Cohere.Activity.log("appointment", "Cancelled meeting \"" + appt.title + "\"");
+        Cohere.Activity.log("appointment", "Cancelled event \"" + appt.title + "\"");
         appt.memberIds.forEach(function (memberId) {
-            Cohere.Notify.add("meeting", "Meeting \"" + appt.title + "\" on " + Cohere.Utils.formatDate(appt.date) + " has been cancelled.", memberId, appt.id);
+            Cohere.Notify.add("meeting", "Event \"" + appt.title + "\" on " + Cohere.Utils.formatDate(appt.date) + " has been cancelled.", memberId, appt.id);
         });
         return { ok: true, data: appt };
     }
@@ -194,16 +198,16 @@ Cohere.Store = (function () {
     function deleteAppointment(id) {
         if (!Cohere.Permissions.can("manageMeetings")) return { ok: false, error: Cohere.Permissions.denyMessage("manageMeetings") };
         const appt = getAppointment(id);
-        if (!appt) return { ok: false, error: "Meeting not found." };
+        if (!appt) return { ok: false, error: "Event not found." };
         const attendanceCount = window.Cohere.state.attendance.filter(function (a) { return a.appointmentId === id; }).length;
         window.Cohere.state.attendance = window.Cohere.state.attendance.filter(function (a) { return a.appointmentId !== id; });
         window.Cohere.state.appointments = window.Cohere.state.appointments.filter(function (a) { return a.id !== id; });
         Cohere.Storage.saveAll();
-        Cohere.Activity.log("appointment", "Deleted meeting \"" + appt.title + "\"" + (attendanceCount > 0 ? " and " + attendanceCount + " attendance record(s)" : ""));
+        Cohere.Activity.log("appointment", "Deleted event \"" + appt.title + "\"" + (attendanceCount > 0 ? " and " + attendanceCount + " attendance record(s)" : ""));
         return { ok: true, data: appt };
     }
 
-        // ---- Attendance (M4) ----
+    // ---- Attendance (M4) ----
     // Returns all attendance records for a meeting.
     function getAttendance(apptId) {
         return (window.Cohere.state.attendance || []).filter(function (r) {

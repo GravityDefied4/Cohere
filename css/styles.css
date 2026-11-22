@@ -447,6 +447,29 @@ th {
     border-radius: var(--radius);
 }
 
+/* Meeting type radio buttons */
+fieldset {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+}
+
+fieldset legend {
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0 var(--space-2);
+}
+
+fieldset label {
+    font-weight: normal;
+    cursor: pointer;
+}
+
+fieldset input[type="radio"] {
+    margin-right: var(--space-2);
+}
+
 /* 7) Responsive */
 @media (max-width: 900px) {
     #btn-menu-toggle {

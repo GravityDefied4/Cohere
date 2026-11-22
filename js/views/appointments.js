@@ -10,6 +10,12 @@ Cohere.Appointments = (function () {
         const apptCancel = document.getElementById("appt-cancel");
         if (apptCancel) apptCancel.addEventListener("click", resetApptForm);
 
+        // Meeting type radio change (toggle location/link fields)
+        const meetingTypeRadios = document.querySelectorAll('input[name="appt-meetingType"]');
+        meetingTypeRadios.forEach(function (radio) {
+            radio.addEventListener("change", toggleMeetingTypeFields);
+        });
+
         // Live conflict preview on date/time/officer changes (E22)
         ["appt-date", "appt-start", "appt-end"].forEach(function (id) {
             const el = document.getElementById(id);
@@ -53,6 +59,31 @@ Cohere.Appointments = (function () {
         previewConflicts();
     }
 
+    // Toggles location/link fields based on meeting type
+    function toggleMeetingTypeFields() {
+        const selectedType = document.querySelector('input[name="appt-meetingType"]:checked');
+        const locationWrap = document.getElementById("appt-location-wrap");
+        const linkWrap = document.getElementById("appt-meetingLink-wrap");
+
+        if (!selectedType) return;
+
+        if (selectedType.value === "Online") {
+            locationWrap.hidden = true;
+            linkWrap.hidden = false;
+            document.getElementById("appt-location").value = "";
+        } else {
+            locationWrap.hidden = false;
+            linkWrap.hidden = true;
+            document.getElementById("appt-meetingLink").value = "";
+        }
+    }
+
+    // Gets the selected meeting type
+    function getMeetingType() {
+        const selected = document.querySelector('input[name="appt-meetingType"]:checked');
+        return selected ? selected.value : "In-person";
+    }
+
     // Renders the appointment form (member checkboxes grouped by org)
     function renderApptForm() {
         const membersContainer = document.getElementById("appt-members");
@@ -72,10 +103,9 @@ Cohere.Appointments = (function () {
         });
 
         const editingId = document.getElementById("appt-id").value;
-        let editingMemberIds = [];
+        let editingAppt = null;
         if (editingId) {
-            const appt = Cohere.Store.getAppointment(editingId);
-            if (appt) editingMemberIds = appt.memberIds;
+            editingAppt = Cohere.Store.getAppointment(editingId);
         }
 
         Object.keys(grouped).forEach(function (orgId) {
@@ -87,7 +117,7 @@ Cohere.Appointments = (function () {
             grouped[orgId].forEach(function (m) {
                 const label = Cohere.Utils.createEl("label", { style: "display: block; padding: 4px 0; cursor: pointer;" });
                 const checkbox = Cohere.Utils.createEl("input", { type: "checkbox", value: m.id, style: "margin-right: 8px;" });
-                if (editingMemberIds.includes(m.id)) checkbox.checked = true;
+                if (editingAppt && editingAppt.memberIds.includes(m.id)) checkbox.checked = true;
                 label.appendChild(checkbox);
                 label.appendChild(document.createTextNode(m.fullName + " — " + m.position));
                 groupDiv.appendChild(label);
@@ -105,18 +135,34 @@ Cohere.Appointments = (function () {
             ], null);
         }
 
-        if (editingId) {
-            const appt = Cohere.Store.getAppointment(editingId);
-            if (appt) {
-                document.getElementById("appt-title").value = appt.title;
-                document.getElementById("appt-date").value = appt.date;
-                document.getElementById("appt-start").value = appt.startTime;
-                document.getElementById("appt-end").value = appt.endTime;
-                document.getElementById("appt-location").value = appt.location;
-                document.getElementById("appt-notes").value = appt.notes || "";
-                document.getElementById("appt-submit").textContent = "Update Meeting";
-                document.getElementById("appt-cancel").hidden = false;
+        if (editingAppt) {
+            document.getElementById("appt-title").value = editingAppt.title;
+            document.getElementById("appt-date").value = editingAppt.date;
+            document.getElementById("appt-start").value = editingAppt.startTime;
+            document.getElementById("appt-end").value = editingAppt.endTime;
+            document.getElementById("appt-notes").value = editingAppt.notes || "";
+
+            // Set meeting type radio
+            const meetingType = editingAppt.meetingType || "In-person";
+            const radio = document.querySelector(`input[name="appt-meetingType"][value="${meetingType}"]`);
+            if (radio) radio.checked = true;
+
+            // Set location or link
+            if (meetingType === "Online") {
+                document.getElementById("appt-meetingLink").value = editingAppt.meetingLink || "";
+            } else {
+                document.getElementById("appt-location").value = editingAppt.location || "";
             }
+
+            toggleMeetingTypeFields();
+
+            document.getElementById("appt-submit").textContent = "Update Event";
+            document.getElementById("appt-cancel").hidden = false;
+        } else {
+            // Reset to defaults
+            const defaultRadio = document.querySelector('input[name="appt-meetingType"][value="In-person"]');
+            if (defaultRadio) defaultRadio.checked = true;
+            toggleMeetingTypeFields();
         }
     }
 
@@ -180,7 +226,8 @@ Cohere.Appointments = (function () {
         if (statusFilter) appointments = appointments.filter(function (a) { return a.status === statusFilter; });
         if (search) {
             appointments = appointments.filter(function (a) {
-                return a.title.toLowerCase().includes(search) || a.location.toLowerCase().includes(search);
+                const locationOrLink = a.meetingType === "Online" ? (a.meetingLink || "") : (a.location || "");
+                return a.title.toLowerCase().includes(search) || locationOrLink.toLowerCase().includes(search);
             });
         }
 
@@ -205,7 +252,7 @@ Cohere.Appointments = (function () {
         });
 
         if (appointments.length === 0) {
-            listContainer.appendChild(Cohere.Utils.createEl("p", { textContent: "No meetings found. Use the form to schedule one.", className: "text-muted" }));
+            listContainer.appendChild(Cohere.Utils.createEl("p", { textContent: "No events found. Use the form to schedule one.", className: "text-muted" }));
             return;
         }
 
@@ -219,7 +266,23 @@ Cohere.Appointments = (function () {
             card.appendChild(header);
 
             card.appendChild(Cohere.Utils.createEl("div", { textContent: Cohere.Utils.formatDate(appt.date) + " • " + Cohere.Utils.formatTime(appt.startTime) + "–" + Cohere.Utils.formatTime(appt.endTime), style: "font-weight: 500; margin-bottom: 4px;" }));
-            card.appendChild(Cohere.Utils.createEl("div", { textContent: "📍 " + appt.location, style: "margin-bottom: 8px;" }));
+
+            // Display location or meeting link based on type
+            const meetingType = appt.meetingType || "In-person";
+            if (meetingType === "Online") {
+                const linkDiv = Cohere.Utils.createEl("div", { style: "margin-bottom: 8px;" });
+                linkDiv.appendChild(Cohere.Utils.createEl("span", { textContent: "🔗 Online: ", style: "font-weight: 500;" }));
+                const link = Cohere.Utils.createEl("a", {
+                    textContent: appt.meetingLink || "No link provided",
+                    href: appt.meetingLink || "#",
+                    target: "_blank",
+                    rel: "noopener noreferrer"
+                });
+                linkDiv.appendChild(link);
+                card.appendChild(linkDiv);
+            } else {
+                card.appendChild(Cohere.Utils.createEl("div", { textContent: "📍 " + (appt.location || "No location"), style: "margin-bottom: 8px;" }));
+            }
 
             const invitees = Cohere.Utils.createEl("div", { style: "margin-bottom: 8px;" });
             invitees.appendChild(Cohere.Utils.createEl("strong", { textContent: "Invitees: ", style: "font-size: 0.875rem;" }));
@@ -236,7 +299,7 @@ Cohere.Appointments = (function () {
             if (canManage) {
                 actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Edit", className: "btn btn-secondary", dataset: { action: "edit", id: appt.id } }));
                 if (appt.status === "Scheduled") {
-                    actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Cancel Meeting", className: "btn btn-danger", dataset: { action: "cancel-meeting", id: appt.id } }));
+                    actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Cancel Event", className: "btn btn-danger", dataset: { action: "cancel-meeting", id: appt.id } }));
                 }
                 actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Delete", className: "btn btn-danger", dataset: { action: "delete", id: appt.id } }));
             }
@@ -253,12 +316,15 @@ Cohere.Appointments = (function () {
         const form = e.target;
         const editingId = document.getElementById("appt-id").value;
 
+        const meetingType = getMeetingType();
         const values = {
             title: document.getElementById("appt-title").value,
             date: document.getElementById("appt-date").value,
             startTime: document.getElementById("appt-start").value,
             endTime: document.getElementById("appt-end").value,
-            location: document.getElementById("appt-location").value,
+            location: meetingType === "In-person" ? document.getElementById("appt-location").value : "",
+            meetingLink: meetingType === "Online" ? document.getElementById("appt-meetingLink").value : "",
+            meetingType: meetingType,
             notes: document.getElementById("appt-notes").value,
             memberIds: getSelectedMemberIds()
         };
@@ -287,7 +353,7 @@ Cohere.Appointments = (function () {
 
         const result = editingId ? Cohere.Store.updateAppointment(editingId, values) : Cohere.Store.addAppointment(values);
         if (result.ok) {
-            Cohere.UI.showToast(editingId ? "Meeting updated." : "Meeting scheduled.", "success");
+            Cohere.UI.showToast(editingId ? "Event updated." : "Event scheduled.", "success");
             resetApptForm();
             Cohere.App.renderAll();
         } else {
@@ -300,14 +366,6 @@ Cohere.Appointments = (function () {
         const appt = Cohere.Store.getAppointment(id);
         if (!appt) return;
         document.getElementById("appt-id").value = appt.id;
-        document.getElementById("appt-title").value = appt.title;
-        document.getElementById("appt-date").value = appt.date;
-        document.getElementById("appt-start").value = appt.startTime;
-        document.getElementById("appt-end").value = appt.endTime;
-        document.getElementById("appt-location").value = appt.location;
-        document.getElementById("appt-notes").value = appt.notes || "";
-        document.getElementById("appt-submit").textContent = "Update Meeting";
-        document.getElementById("appt-cancel").hidden = false;
         renderApptForm();
         previewConflicts();
         document.getElementById("appt-title").focus();
@@ -317,10 +375,10 @@ Cohere.Appointments = (function () {
     function handleCancelMeeting(id) {
         const appt = Cohere.Store.getAppointment(id);
         if (!appt) return;
-        if (!Cohere.UI.confirmAction("Cancel meeting \"" + appt.title + "\"?")) return;
+        if (!Cohere.UI.confirmAction("Cancel event \"" + appt.title + "\"?")) return;
         const result = Cohere.Store.cancelAppointment(id);
         if (result.ok) {
-            Cohere.UI.showToast("Meeting cancelled.", "success");
+            Cohere.UI.showToast("Event cancelled.", "success");
             Cohere.App.renderAll();
         } else {
             Cohere.UI.showToast(result.error, "error");
@@ -331,10 +389,10 @@ Cohere.Appointments = (function () {
     function handleDeleteAppt(id) {
         const appt = Cohere.Store.getAppointment(id);
         if (!appt) return;
-        if (!Cohere.UI.confirmAction("Delete meeting \"" + appt.title + "\"? This will also delete all attendance records for this meeting.")) return;
+        if (!Cohere.UI.confirmAction("Delete event \"" + appt.title + "\"? This will also delete all attendance records for this event.")) return;
         const result = Cohere.Store.deleteAppointment(id);
         if (result.ok) {
-            Cohere.UI.showToast("Meeting deleted.", "success");
+            Cohere.UI.showToast("Event deleted.", "success");
             Cohere.App.renderAll();
         } else {
             Cohere.UI.showToast(result.error, "error");
@@ -353,7 +411,7 @@ Cohere.Appointments = (function () {
         if (form) {
             form.reset();
             document.getElementById("appt-id").value = "";
-            document.getElementById("appt-submit").textContent = "Schedule Meeting";
+            document.getElementById("appt-submit").textContent = "Schedule Event";
             document.getElementById("appt-cancel").hidden = true;
             Cohere.UI.clearFieldErrors(form);
             const membersError = form.querySelector("#appt-members + .field-error");
@@ -364,6 +422,10 @@ Cohere.Appointments = (function () {
                 conflictBox.hidden = true;
                 Cohere.Utils.clearEl(conflictBox);
             }
+            // Reset meeting type to default
+            const defaultRadio = document.querySelector('input[name="appt-meetingType"][value="In-person"]');
+            if (defaultRadio) defaultRadio.checked = true;
+            toggleMeetingTypeFields();
         }
     }
 
