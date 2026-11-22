@@ -43,7 +43,7 @@ Cohere.UI = (function () {
     function showFieldErrors(form, errors) {
         if (!form || !errors) return;
         Object.keys(errors).forEach(function (field) {
-            const input = form.querySelector(`#${field}`);
+            const input = form.querySelector("#" + field);
             if (input) {
                 input.classList.add("is-invalid");
                 input.setAttribute("aria-invalid", "true");
@@ -84,10 +84,27 @@ Cohere.UI = (function () {
         return Cohere.Utils.createEl("span", { className: "badge badge-" + (kind || "default"), textContent: text });
     }
 
-    // Applies permissions to the UI (M0 stub: does nothing since can() is always true)
+    // M9: Applies permissions to the UI (hides forms/buttons, shows view-only notes)
     function applyPermissions() {
-        // In M9, this will hide elements with data-permission if !Permissions.can(action)
-        // and show view-only notes.
+        // Hide elements the user cannot use
+        document.querySelectorAll("[data-permission]").forEach(function (el) {
+            const action = el.dataset.permission;
+            if (!Cohere.Permissions.can(action)) {
+                el.hidden = true;
+            } else {
+                el.hidden = false;
+            }
+        });
+
+        // Show view-only notes for actions the user cannot use
+        document.querySelectorAll("[data-permission-note]").forEach(function (el) {
+            const action = el.dataset.permissionNote;
+            if (!Cohere.Permissions.can(action)) {
+                el.hidden = false;
+            } else {
+                el.hidden = true;
+            }
+        });
     }
 
     // Attach global listeners for modal/overlay close and field error clearing

@@ -225,20 +225,26 @@ Cohere.Attendance = (function () {
             const statusTd = Cohere.Utils.createEl("td");
             const current = statusMap[memberId] || null;
 
-            ["present", "absent", "excused"].forEach(function (status) {
-                const isActive = current === status;
-                const btn = Cohere.Utils.createEl("button", {
-                    textContent: status.charAt(0).toUpperCase() + status.slice(1),
-                    className: "btn " + (isActive ? "" : "btn-secondary"),
-                    dataset: { action: "set-status", memberId: memberId, status: status },
-                    style: "margin-right: 4px;"
+            if (Cohere.Permissions.can("markAttendance")) {
+                // Show buttons for users with permission
+                ["present", "absent", "excused"].forEach(function (status) {
+                    const isActive = current === status;
+                    const btn = Cohere.Utils.createEl("button", {
+                        textContent: status.charAt(0).toUpperCase() + status.slice(1),
+                        className: "btn " + (isActive ? "" : "btn-secondary"),
+                        dataset: { action: "set-status", memberId: memberId, status: status },
+                        style: "margin-right: 4px;"
+                    });
+                    statusTd.appendChild(btn);
                 });
-                statusTd.appendChild(btn);
-            });
-
-            if (current) {
-                const badge = Cohere.UI.statusBadge(current, current);
-                statusTd.appendChild(badge);
+            } else {
+                // Show read-only badge for users without permission
+                if (current) {
+                    const kind = current === "present" ? "present" : current === "absent" ? "absent" : "excused";
+                    statusTd.appendChild(Cohere.UI.statusBadge(current.charAt(0).toUpperCase() + current.slice(1), kind));
+                } else {
+                    statusTd.appendChild(Cohere.UI.statusBadge("Unmarked", "pending"));
+                }
             }
 
             tr.appendChild(statusTd);

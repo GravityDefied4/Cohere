@@ -23,7 +23,7 @@ Cohere.Permissions = (function () {
             Cohere.state.members.forEach(function (m) {
                 const org = Cohere.state.organizations.find(function (o) { return o.id === m.orgId; });
                 const orgName = org ? org.name : "Unknown Org";
-                items.push({ value: m.id, label: `${m.fullName} — ${m.position} (${orgName})` });
+                items.push({ value: m.id, label: m.fullName + " — " + m.position + " (" + orgName + ")" });
             });
         }
         Cohere.Utils.populateSelect(select, items, null);
@@ -58,24 +58,31 @@ Cohere.Permissions = (function () {
                 return { id: m.id, name: m.fullName, position: m.position, isAdmin: false };
             }
         }
+        // Fallback if member was deleted
         return { id: "admin", name: "Administrator (demo)", position: "", isAdmin: true };
     }
 
-    // M0 Stub: Always returns true
+    // M9: Checks if the current actor can perform the action
     function can(action) {
-        return true;
+        const actor = getActor();
+        if (actor.isAdmin) return true;
+
+        const allowedActions = Cohere.Config.PERMISSIONS[actor.position] || [];
+        return allowedActions.includes(action);
     }
 
-    // M0 Stub: Always returns true
+    // M9: Checks if the actor can update a specific task (manageTasks OR is the assignee)
     function canUpdateTask(task) {
-        return true;
+        if (can("manageTasks")) return true;
+        const actor = getActor();
+        return task.assigneeId === actor.id;
     }
 
     // Returns a deny message for an action
     function denyMessage(action) {
         const actor = getActor();
         const label = Cohere.Config.ACTION_LABELS[action] || action;
-        return `Viewing as ${actor.name} (${actor.position || "Administrator"}): you do not have permission to ${label}.`;
+        return "Viewing as " + actor.name + " (" + (actor.position || "Administrator") + "): you do not have permission to " + label + ".";
     }
 
     return { init, renderSelector, getViewingAs, setViewingAs, getActor, can, canUpdateTask, denyMessage };

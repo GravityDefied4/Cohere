@@ -355,7 +355,7 @@ Cohere.Tasks = (function () {
                     style: "margin-left: 4px;"
                 });
                 actionsTd.appendChild(editBtn);
-                actionsTd.appendChild(deleteBtn, actionsTd);
+                actionsTd.appendChild(deleteBtn);
             }
 
             // 2. canUpdateTask permission (Complete / Reopen)

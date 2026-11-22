@@ -23,6 +23,7 @@ Cohere.Config = (function () {
     const MAX_ACTIVITY = 200;
     const MAX_NOTIFICATIONS = 100;
 
+    // M9: Actions and Permissions
     const ACTIONS = ["manageMembers", "manageTasks", "manageMeetings", "markAttendance", "manageData"];
 
     const PERMISSIONS = {
@@ -45,5 +46,9 @@ Cohere.Config = (function () {
         manageData: "manage data"
     };
 
-    return { KEYS, POSITIONS, PRIORITIES, TASK_STATUSES, APPT_STATUSES, ATT_STATUSES, WEIGHTS, REMINDER_DAYS, MAX_ACTIVITY, MAX_NOTIFICATIONS, ACTIONS, PERMISSIONS, ACTION_LABELS };
+    return {
+        KEYS, POSITIONS, PRIORITIES, TASK_STATUSES, APPT_STATUSES, ATT_STATUSES,
+        WEIGHTS, REMINDER_DAYS, MAX_ACTIVITY, MAX_NOTIFICATIONS,
+        ACTIONS, PERMISSIONS, ACTION_LABELS
+    };
 })();
