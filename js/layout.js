@@ -1,5 +1,5 @@
 window.Cohere = window.Cohere || {};
-// Layout chrome: login gate, page titles, role pill, form panels and the Add Task stepper.
+// Layout chrome: login gate, page titles, role pill, and the form panels.
 Cohere.Layout = (function () {
     "use strict";
 
@@ -215,7 +215,6 @@ Cohere.Layout = (function () {
     function openPanel(id) {
         const p = $(id); if (!p) return;
         p.hidden = false;
-        if (id === "task-panel") setStep(1);
         p.scrollIntoView({ behavior: "smooth", block: "nearest" });
         const first = p.querySelector("input:not([type=hidden]), textarea, select");
         if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 60);
@@ -223,26 +222,8 @@ Cohere.Layout = (function () {
     function closePanel(id) {
         const p = $(id); if (!p) return;
         p.hidden = true;
-        if (id === "task-panel") setStep(1);
     }
     function closeAllPanels() { document.querySelectorAll(".form-panel").forEach(function (p) { closePanel(p.id); }); }
-
-    // ---- Add Task stepper ---------------------------------------------------
-    function setStep(n) {
-        const form = $("task-form"); if (!form) return;
-        form.dataset.step = n;
-        form.querySelectorAll(".step").forEach(function (s) { s.hidden = Number(s.dataset.step) !== n; });
-        document.querySelectorAll("#task-panel .stepper li").forEach(function (li, i) {
-            li.classList.toggle("on", i + 1 === n);
-            li.classList.toggle("done", i + 1 < n);
-        });
-    }
-    function currentStep() { return Number($("task-form").dataset.step) || 1; }
-    function stepOfFirstError(form) {
-        const bad = form.querySelector(".is-invalid");
-        const step = bad && bad.closest(".step");
-        return step ? Number(step.dataset.step) : 0;
-    }
 
     function init() {
         initTheme();
@@ -289,21 +270,11 @@ Cohere.Layout = (function () {
             if (host && EDIT_TARGETS[host.id]) openPanel(EDIT_TARGETS[host.id]);
         }, true);
 
-        // Stepper navigation
-        const form = $("task-form");
-        document.querySelector("#task-panel .wiz-next").addEventListener("click", function () { setStep(Math.min(3, currentStep() + 1)); });
-        document.querySelector("#task-panel .wiz-back").addEventListener("click", function () { setStep(Math.max(1, currentStep() - 1)); });
-        // Pressing Enter before the last step moves forward instead of submitting
-        document.addEventListener("submit", function (e) {
-            if (e.target === form && currentStep() < 3) { e.preventDefault(); e.stopPropagation(); setStep(currentStep() + 1); }
-        }, true);
-
-        // After a submit: jump to the step with an error, or close the panel when the form was reset (success)
+        // After a submit: close the panel when the form was reset (success)
         document.addEventListener("submit", function (e) {
             const f = e.target; const panel = f.closest && f.closest(".form-panel");
             if (!panel) return;
             setTimeout(function () {
-                if (f === form) { const s = stepOfFirstError(f); if (s) { setStep(s); return; } }
                 const idEl = f.querySelector("input[type=hidden]");
                 const firstText = f.querySelector("input[type=text], textarea");
                 if (!f.querySelector(".is-invalid") && (!idEl || !idEl.value) && (!firstText || !firstText.value)) closePanel(panel.id);

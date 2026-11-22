@@ -1,0 +1,465 @@
+/* ==========================================================================
+   Tasks tab (Task Delegation)
+   --------------------------------------------------------------------------
+   Loaded after schedule.css. Uses the same --ct-* tokens so light and dark
+   mode, radii and the cobalt accent match the other tabs. Everything is
+   scoped to #view-tasks, so nothing here leaks into other views.
+   ========================================================================== */
+
+#main #view-tasks {
+    --tk-warn: #a8610a;
+    --tk-warn-tint: rgba(214, 140, 20, .12);
+    --tk-warn-line: rgba(214, 140, 20, .35);
+}
+
+:root[data-theme="dark"] #main #view-tasks {
+    --tk-warn: #f6c36b;
+    --tk-warn-tint: rgba(214, 140, 20, .16);
+    --tk-warn-line: rgba(246, 195, 107, .3);
+}
+
+/* 1) Header ---------------------------------------------------------------- */
+#main #view-tasks .task-head {
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+#main #view-tasks .task-sub {
+    margin: 4px 0 0;
+    font-size: .875rem;
+    color: var(--ct-muted);
+    max-width: 52ch;
+}
+
+/* 2) Form panel ------------------------------------------------------------ */
+#main #view-tasks .task-form-panel {
+    margin-bottom: 24px;
+}
+
+#main #view-tasks .task-form-panel .grid-2 {
+    gap: 18px 20px;
+}
+
+#main #view-tasks .task-form-panel .field>label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+#main #view-tasks .task-optional {
+    font-weight: 400;
+    color: var(--ct-muted);
+}
+
+#main #view-tasks .task-form-panel textarea {
+    min-height: 84px;
+}
+
+#main #view-tasks .task-form-panel .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 18px;
+    border-top: 1px solid var(--ct-line-soft);
+}
+
+/* 3) Status tabs ----------------------------------------------------------- */
+#main #view-tasks .task-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    margin-bottom: 14px;
+    background: var(--ct-surface-2);
+    border: 1px solid var(--ct-line);
+    border-radius: 12px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+#main #view-tasks .task-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+#main #view-tasks .task-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ct-muted);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+}
+
+#main #view-tasks .task-tab:hover {
+    color: var(--ct-text);
+}
+
+#main #view-tasks .task-tab.is-active {
+    background: var(--ct-surface);
+    border-color: var(--ct-line);
+    color: var(--ct-text);
+}
+
+#main #view-tasks .task-tab:focus-visible {
+    outline: 2px solid var(--ct-accent-2);
+    outline-offset: 1px;
+}
+
+#main #view-tasks .task-tab-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: var(--ct-line-soft);
+    color: var(--ct-muted);
+    font-size: .72rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#main #view-tasks .task-tab.is-active .task-tab-count {
+    background: var(--ct-tint);
+    color: var(--ct-accent);
+}
+
+#main #view-tasks .task-tab.is-overdue.is-active .task-tab-count {
+    background: var(--ct-danger-tint);
+    color: var(--ct-danger);
+}
+
+/* 4) Toolbar --------------------------------------------------------------- */
+#main #view-tasks .task-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+#main #view-tasks .task-toolbar .search {
+    flex: 1 1 260px;
+    max-width: 420px;
+}
+
+#main #view-tasks .task-toolbar>select {
+    flex: 0 1 190px;
+    min-width: 140px;
+}
+
+/* 5) Delegation register (table) ------------------------------------------- */
+#main #view-tasks .task-table-wrap {
+    overflow-x: auto;
+}
+
+#main #view-tasks .task-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#main #view-tasks .task-table th {
+    padding: 12px 16px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+#main #view-tasks .task-table td {
+    padding: 14px 16px;
+    vertical-align: middle;
+}
+
+#main #view-tasks .task-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+#main #view-tasks .task-table .col-actions {
+    width: 64px;
+    text-align: right;
+    color: var(--ct-muted);
+}
+
+#main #view-tasks .task-cell-title {
+    min-width: 240px;
+    max-width: 380px;
+}
+
+#main #view-tasks .task-title {
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ct-text);
+    overflow-wrap: anywhere;
+}
+
+#main #view-tasks .task-row.is-done .task-title {
+    color: var(--ct-muted);
+}
+
+#main #view-tasks .task-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 3px;
+    font-size: .82rem;
+    line-height: 1.45;
+    color: var(--ct-muted);
+}
+
+/* Assigned to */
+#main #view-tasks .task-who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+#main #view-tasks .task-avatar {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--ct-tint);
+    color: var(--ct-accent);
+    font-size: .68rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+#main #view-tasks .task-who-name {
+    font-size: .88rem;
+    font-weight: 500;
+    color: var(--ct-text);
+    white-space: nowrap;
+}
+
+#main #view-tasks .task-who-sub {
+    margin-top: 1px;
+    font-size: .76rem;
+    color: var(--ct-muted);
+    white-space: nowrap;
+}
+
+/* Deadline */
+#main #view-tasks .task-date {
+    font-size: .88rem;
+    color: var(--ct-text);
+    white-space: nowrap;
+}
+
+#main #view-tasks .task-due {
+    margin-top: 2px;
+    font-size: .76rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#main #view-tasks .task-due.is-overdue {
+    color: var(--ct-danger);
+}
+
+#main #view-tasks .task-due.is-soon {
+    color: var(--tk-warn);
+}
+
+#main #view-tasks .task-due.is-done {
+    color: var(--ct-success);
+}
+
+:root[data-theme="dark"] #main #view-tasks .task-due.is-done {
+    color: #6fdcab;
+}
+
+/* Overdue rows: a thin red edge, like the other tabs */
+#main #view-tasks .task-row.is-overdue {
+    box-shadow: inset 2px 0 0 var(--ct-danger);
+}
+
+/* Badges: one outlined style, tinted by meaning */
+#main #view-tasks .badge {
+    border: 1px solid var(--ct-line);
+    background: transparent;
+    color: var(--ct-muted);
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+#main #view-tasks .badge-high {
+    background: var(--ct-danger-tint);
+    border-color: transparent;
+    color: var(--ct-danger);
+}
+
+#main #view-tasks .badge-medium {
+    background: var(--tk-warn-tint);
+    border-color: transparent;
+    color: var(--tk-warn);
+}
+
+#main #view-tasks .badge-low {
+    background: var(--ct-success-tint);
+    border-color: transparent;
+    color: var(--ct-success);
+}
+
+#main #view-tasks .badge-pending {
+    background: transparent;
+    color: var(--ct-muted);
+}
+
+#main #view-tasks .badge-progress {
+    background: var(--ct-tint);
+    border-color: var(--ct-tint-line);
+    color: var(--ct-accent);
+}
+
+#main #view-tasks .badge-completed {
+    background: var(--ct-success-tint);
+    border-color: transparent;
+    color: var(--ct-success);
+}
+
+:root[data-theme="dark"] #main #view-tasks .badge-low,
+:root[data-theme="dark"] #main #view-tasks .badge-completed {
+    color: #6fdcab;
+}
+
+:root[data-theme="dark"] #main #view-tasks .badge-high {
+    color: #ff9d94;
+}
+
+/* View-only note (Members) */
+#main #view-tasks .view-only-note {
+    margin-bottom: 16px;
+    font-size: .85rem;
+}
+
+/* 6) Empty state ----------------------------------------------------------- */
+#main #view-tasks .task-table tr.task-empty-row:hover {
+    background: transparent;
+}
+
+#main #view-tasks .task-empty-cell {
+    padding: 0;
+    border-bottom: 0;
+}
+
+#main #view-tasks .task-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--ct-muted);
+    font-size: .875rem;
+}
+
+#main #view-tasks .task-empty .ic {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 6px;
+    color: var(--ct-accent);
+}
+
+#main #view-tasks .task-empty strong {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+/* 7) Small screens: each row becomes a labelled block ---------------------- */
+@media (max-width: 720px) {
+    #main #view-tasks .task-table thead {
+        display: none;
+    }
+
+    #main #view-tasks .task-table,
+    #main #view-tasks .task-table tbody {
+        display: block;
+    }
+
+    #main #view-tasks .task-table tr.task-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 16px;
+        padding: 16px;
+        border-bottom: 1px solid var(--ct-line-soft);
+        position: relative;
+    }
+
+    #main #view-tasks .task-table tr.task-row:last-child {
+        border-bottom: 0;
+    }
+
+    #main #view-tasks .task-table tr.task-row td {
+        display: block;
+        padding: 0;
+        border: 0;
+        min-width: 0;
+    }
+
+    #main #view-tasks .task-table tr.task-row td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        font-size: .7rem;
+        font-weight: 600;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: var(--ct-muted);
+    }
+
+    #main #view-tasks .task-table .task-cell-title {
+        grid-column: 1 / -1;
+        max-width: none;
+        padding-right: 44px;
+    }
+
+    #main #view-tasks .task-table .task-cell-title::before {
+        display: none !important;
+    }
+
+    #main #view-tasks .task-table tr.task-row td[data-label="Assigned to"] {
+        grid-column: 1 / -1;
+    }
+
+    #main #view-tasks .task-table .col-actions {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: auto;
+    }
+
+    #main #view-tasks .task-table tr.task-empty-row {
+        display: block;
+    }
+
+    #main #view-tasks .task-table tr.task-empty-row td {
+        display: block;
+    }
+
+    #main #view-tasks .task-toolbar .search,
+    #main #view-tasks .task-toolbar #task-filter-assignee {
+        flex: 1 1 100%;
+        max-width: none;
+    }
+
+    #main #view-tasks .task-toolbar #task-filter-priority,
+    #main #view-tasks .task-toolbar #task-sort {
+        flex: 1 1 calc(50% - 5px);
+        min-width: 0;
+    }
+}

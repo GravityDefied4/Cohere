@@ -622,5 +622,5 @@ Cohere.Members = (function () {
         });
     }
 
-    return { init, render, renderMemberTable, applyOrb, resetMemberForm };
+    return { init, render, renderMemberTable, applyOrb, resetMemberForm, openActionMenu, closeActionMenu };
 })();

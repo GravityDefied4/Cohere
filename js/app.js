@@ -47,7 +47,7 @@ Cohere.App = (function () {
             Cohere.Services.generateDeadlineReminders();
         }
 
-        // 5.5) Layout chrome (login gate, form panels, stepper)
+        // 5.5) Layout chrome (login gate, form panels)
         if (Cohere.Layout) Cohere.Layout.init();
 
         // 6) Render all

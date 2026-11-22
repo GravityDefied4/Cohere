@@ -468,7 +468,7 @@
     color: var(--ct-accent);
 }
 
-/* 12) Notes, conflicts, stepper ------------------------------------------- */
+/* 12) Notes, conflicts ------------------------------------------- */
 #main .view-only-note,
 #main #task-completed-wrap {
     background: var(--ct-tint);
@@ -484,31 +484,6 @@
     border: 1px solid var(--ct-danger);
     border-radius: 12px;
     color: var(--ct-danger);
-}
-
-#main .stepper li::before {
-    width: 16px;
-    height: 16px;
-    margin-left: -8px;
-    border: 1px solid var(--ct-line);
-    background: var(--ct-surface);
-}
-
-#main .stepper li::after {
-    height: 1px;
-    top: 12px;
-    background: var(--ct-line);
-}
-
-#main .stepper li.done::before {
-    background: var(--ct-accent);
-    border-color: var(--ct-accent);
-}
-
-#main .stepper li.on::before {
-    background: var(--ct-btn);
-    border-color: var(--ct-btn);
-    box-shadow: 0 0 0 4px var(--ct-ring);
 }
 
 /* 13) Modal (shown over any tab). Toasts and the notifications panel live in components.css */ ------------------------------- */

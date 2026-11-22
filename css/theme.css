@@ -190,11 +190,6 @@ html.theme-anim *::after {
     border-left-color: var(--btn);
 }
 
-:root[data-theme="dark"] .stepper li.on::before {
-    background: var(--btn);
-    border-color: var(--btn);
-}
-
 :root[data-theme="dark"] .gradient-card {
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
 }

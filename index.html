@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/organization.css">
     <link rel="stylesheet" href="css/schedule.css">
+    <link rel="stylesheet" href="css/tasks.css">
 </head>
 
 <body>
@@ -422,70 +423,73 @@
                     </section>
 
                     <section class="view" id="view-tasks" hidden>
-                        <div class="section-head">
-                            <h2>Tasks</h2><button type="button" class="btn" data-open="task-panel"
-                                data-permission="manageTasks"><svg class="ic" aria-hidden="true">
+                        <div class="section-head task-head">
+                            <div class="task-head-text">
+                                <h2>Delegated Tasks</h2>
+                                <p class="task-sub">Assign work, set deadlines and keep track of what still needs doing.</p>
+                            </div>
+                            <button type="button" class="btn" data-open="task-panel" data-permission="manageTasks"><svg
+                                    class="ic" aria-hidden="true">
                                     <use href="#i-plus" />
                                 </svg>Add Task</button>
                         </div>
-                        <section class="form-panel" id="task-panel" hidden>
+
+                        <section class="form-panel task-form-panel" id="task-panel" hidden>
                             <div class="panel-head">
-                                <h2>Add Task</h2><button type="button" class="icon-btn panel-close"
+                                <h2 id="task-panel-title">Add Task</h2><button type="button" class="icon-btn panel-close"
                                     aria-label="Close form"><svg class="ic" aria-hidden="true">
                                         <use href="#i-x" />
                                     </svg></button>
                             </div>
-                            <ol class="stepper" aria-hidden="true">
-                                <li class="on">Details</li>
-                                <li>Assignment</li>
-                                <li>Status</li>
-                            </ol>
-                            <form id="task-form" data-step="1" novalidate>
+                            <form id="task-form" class="grid-2" novalidate>
                                 <input type="hidden" id="task-id">
-                                <div class="step" data-step="1">
-                                    <div class="field "><label for="task-title">Task name</label><input type="text"
-                                            id="task-title"></div>
-                                    <div class="field "><label for="task-description">Description</label><textarea
-                                            id="task-description"></textarea></div>
+                                <div class="field span-2"><label for="task-title">Task name</label><input type="text"
+                                        id="task-title" placeholder="e.g., Prepare the event budget"></div>
+                                <div class="field span-2"><label for="task-description">Description <span
+                                            class="task-optional">(optional)</span></label><textarea
+                                        id="task-description" placeholder="Add any details the assignee should know"></textarea>
                                 </div>
-                                <div class="step" data-step="2" hidden>
-                                    <div class="field "><label for="task-assigneeId">Assignee</label><select
-                                            id="task-assigneeId"></select></div>
-                                    <div class="field "><label for="task-deadline">Deadline</label><input type="date"
-                                            id="task-deadline"></div>
+                                <div class="field"><label for="task-assigneeId">Assign to</label><select
+                                        id="task-assigneeId"></select></div>
+                                <div class="field"><label for="task-deadline">Deadline</label><input type="date"
+                                        id="task-deadline"></div>
+                                <div class="field"><label for="task-priority">Priority</label><select
+                                        id="task-priority"></select></div>
+                                <div class="field"><label for="task-status">Status</label><select
+                                        id="task-status"></select></div>
+                                <div id="task-completed-wrap" class="span-2" hidden>
+                                    <div class="field"><label for="task-completedAt">Completed date</label><input
+                                            type="date" id="task-completedAt"></div>
                                 </div>
-                                <div class="step" data-step="3" hidden>
-                                    <div class="field "><label for="task-status">Status</label><select
-                                            id="task-status"></select></div>
-                                    <div class="field "><label for="task-priority">Priority</label><select
-                                            id="task-priority"></select></div>
-                                    <div id="task-completed-wrap" hidden>
-                                        <div class="field "><label for="task-completedAt">Completed date</label><input
-                                                type="date" id="task-completedAt"></div>
-                                    </div>
-                                </div>
-                                <div class="actions between"><button type="button"
-                                        class="btn btn-ghost wiz-back">Back</button><span class="grow"></span><button
-                                        type="button" id="task-cancel" class="btn btn-secondary" hidden>Cancel
-                                        edit</button><button type="button" class="btn wiz-next">Next</button><button
-                                        type="submit" id="task-submit" class="btn">Add Task</button></div>
+                                <div class="actions span-2"><button type="button" id="task-cancel"
+                                        class="btn btn-secondary">Cancel</button><button type="submit" id="task-submit"
+                                        class="btn">Add Task</button></div>
                             </form>
                         </section>
-                        <div class="toolbar">
-                            <div class="search"><input type="search" id="task-search" placeholder="Task name"></div>
-                            <select id="task-filter-assignee"></select><select id="task-filter-status"></select><select
-                                id="task-filter-priority"></select><select id="task-sort"></select>
+
+                        <p class="view-only-note" data-permission-note="manageTasks" hidden>You have view-only access to tasks. Only
+                            Presidents and Executives can assign, update or remove them.</p>
+
+                        <div id="task-tabs" class="task-tabs" role="group" aria-label="Filter by status"></div>
+
+                        <div class="task-toolbar">
+                            <div class="search"><input type="search" id="task-search"
+                                    placeholder="Search by task or assignee" aria-label="Search tasks"></div>
+                            <select id="task-filter-assignee" aria-label="Assignee"></select>
+                            <select id="task-filter-priority" aria-label="Priority"></select>
+                            <select id="task-sort" aria-label="Sort by"></select>
                         </div>
-                        <div class="table-wrap">
-                            <table>
+
+                        <div class="table-wrap task-table-wrap">
+                            <table class="task-table">
                                 <thead>
                                     <tr>
-                                        <th>Title</th>
-                                        <th>Assignee</th>
+                                        <th>Task</th>
+                                        <th>Assigned to</th>
                                         <th>Priority</th>
                                         <th>Deadline</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
+                                        <th class="col-actions"><span class="sr-only">Actions</span></th>
                                     </tr>
                                 </thead>
                                 <tbody id="task-list"></tbody>
