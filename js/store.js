@@ -203,11 +203,111 @@ Cohere.Store = (function () {
         return { ok: true, data: appt };
     }
 
+        // ---- Attendance (M4) ----
+    // Returns all attendance records for a meeting.
+    function getAttendance(apptId) {
+        return (window.Cohere.state.attendance || []).filter(function (r) {
+            return r.appointmentId === apptId;
+        });
+    }
+
+    // Returns the attendance record for one (meeting, member), or null.
+    function getAttendanceRecord(apptId, memberId) {
+        return (window.Cohere.state.attendance || []).find(function (r) {
+            return r.appointmentId === apptId && r.memberId === memberId;
+        }) || null;
+    }
+
+    // Creates or updates the attendance record for one (meeting, member).
+    function setAttendance(apptId, memberId, status) {
+        if (!Cohere.Permissions.can("markAttendance")) {
+            return { ok: false, error: Cohere.Permissions.denyMessage("markAttendance") };
+        }
+        const appt = getAppointment(apptId);
+        if (!appt) return { ok: false, error: "Meeting not found." };
+        const member = getMember(memberId);
+        if (!member) return { ok: false, error: "Member not found." };
+        if (Cohere.Config.ATT_STATUSES.indexOf(status) === -1) {
+            return { ok: false, error: "Invalid attendance status." };
+        }
+
+        const existing = getAttendanceRecord(apptId, memberId);
+        const now = new Date().toISOString();
+        if (existing) {
+            existing.status = status;
+            existing.markedAt = now;
+        } else {
+            window.Cohere.state.attendance.push({
+                id: Cohere.Utils.generateId("att"),
+                appointmentId: apptId,
+                memberId: memberId,
+                status: status,
+                markedAt: now
+            });
+        }
+
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("attendance", "Marked " + member.fullName + " " + status + " for \"" + appt.title + "\"");
+        return { ok: true };
+    }
+
+    // Marks every invited member of a meeting as present (only fills unmarked ones).
+    function markAllPresent(apptId) {
+        if (!Cohere.Permissions.can("markAttendance")) {
+            return { ok: false, error: Cohere.Permissions.denyMessage("markAttendance") };
+        }
+        const appt = getAppointment(apptId);
+        if (!appt) return { ok: false, error: "Meeting not found." };
+
+        const now = new Date().toISOString();
+        let added = 0;
+        (appt.memberIds || []).forEach(function (memberId) {
+            if (!getMember(memberId)) return;
+            if (getAttendanceRecord(apptId, memberId)) return;
+            window.Cohere.state.attendance.push({
+                id: Cohere.Utils.generateId("att"),
+                appointmentId: apptId,
+                memberId: memberId,
+                status: "present",
+                markedAt: now
+            });
+            added++;
+        });
+
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("attendance", "Marked all present for \"" + appt.title + "\" (" + added + " officer(s))");
+        return { ok: true, added: added };
+    }
+
+    // Deletes all attendance records for a meeting.
+    function clearAttendance(apptId) {
+        if (!Cohere.Permissions.can("markAttendance")) {
+            return { ok: false, error: Cohere.Permissions.denyMessage("markAttendance") };
+        }
+        const appt = getAppointment(apptId);
+        if (!appt) return { ok: false, error: "Meeting not found." };
+
+        const before = (window.Cohere.state.attendance || []).length;
+        window.Cohere.state.attendance = (window.Cohere.state.attendance || []).filter(function (r) {
+            return r.appointmentId !== apptId;
+        });
+        const removed = before - window.Cohere.state.attendance.length;
+
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("attendance", "Cleared attendance for \"" + appt.title + "\" (" + removed + " record(s))");
+        return { ok: true, removed: removed };
+    }
+
     return {
         getOrg, getMember, getMemberName, getTask, getAppointment,
         addOrg, updateOrg, deleteOrg,
         addMember, updateMember, deleteMember,
         addTask, updateTask, deleteTask, setTaskStatus,
-        addAppointment, updateAppointment, cancelAppointment, deleteAppointment
+        addAppointment, updateAppointment, cancelAppointment, deleteAppointment,
+        getAttendance,
+        getAttendanceRecord,
+        setAttendance,
+        markAllPresent,
+        clearAttendance,
     };
 })();
