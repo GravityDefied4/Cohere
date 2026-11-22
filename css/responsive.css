@@ -132,6 +132,10 @@
         bottom: 16px;
     }
 
+    .toast {
+        width: 100%;
+    }
+
     .field.inline {
         flex-direction: column;
         align-items: stretch;

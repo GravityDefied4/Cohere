@@ -18,7 +18,9 @@
 /* 1) Tokens ---------------------------------------------------------------- */
 #main,
 #modal-overlay,
-#toast-container {
+#toast-container,
+#notif-panel,
+#logout-overlay {
     --ct-surface: #ffffff;
     --ct-surface-2: #f6f7fa;
     --ct-line: #d9dce5;
@@ -37,6 +39,8 @@
     --ct-track: #e6e8ef;
     --ct-danger: #c9302a;
     --ct-danger-tint: rgba(201, 48, 42, .07);
+    --ct-success: #0f8f5f;
+    --ct-success-tint: rgba(15, 143, 95, .09);
     --ct-r: 16px;
     --ct-r-sm: 10px;
 
@@ -64,7 +68,9 @@
 
 :root[data-theme="dark"] #main,
 :root[data-theme="dark"] #modal-overlay,
-:root[data-theme="dark"] #toast-container {
+:root[data-theme="dark"] #toast-container,
+:root[data-theme="dark"] #notif-panel,
+:root[data-theme="dark"] #logout-overlay {
     --ct-surface: #181a20;
     --ct-surface-2: #1e2028;
     --ct-line: #32354a;
@@ -83,6 +89,8 @@
     --ct-track: #2b2e3b;
     --ct-danger: #ff7a70;
     --ct-danger-tint: rgba(255, 122, 112, .1);
+    --ct-success: #4cd4a0;
+    --ct-success-tint: rgba(76, 212, 160, .12);
     --hover: rgba(255, 255, 255, .06);
 }
 
@@ -501,7 +509,7 @@
     box-shadow: 0 0 0 4px var(--ct-ring);
 }
 
-/* 13) Modal and toasts (shown over any tab) ------------------------------- */
+/* 13) Modal (shown over any tab). Toasts and the notifications panel live in components.css */ ------------------------------- */
 #modal {
     background: var(--ct-surface);
     border: 1px solid var(--ct-line);
@@ -512,28 +520,6 @@
 
 #modal .btn {
     border-radius: var(--ct-r-sm);
-}
-
-.toast {
-    background: var(--ct-surface);
-    color: var(--ct-text);
-    border: 1px solid var(--ct-line);
-    border-left-width: 3px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(6, 6, 6, .12);
-    font-weight: 500;
-}
-
-.toast-success {
-    border-left-color: #0f8f5f;
-}
-
-.toast-error {
-    border-left-color: var(--ct-danger);
-}
-
-.toast-info {
-    border-left-color: var(--ct-accent-2);
 }
 
 /* 14) Small screens -------------------------------------------------------- */

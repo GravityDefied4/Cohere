@@ -127,11 +127,15 @@ Cohere.Notify = (function () {
         }
     }
 
+    const TYPE_ICONS = { task: "tasks", meeting: "cal", deadline: "clock" };
+
     // Renders the notification panel
     function renderPanel() {
         const panel = document.getElementById("notif-panel");
         const list = document.getElementById("notif-list");
         const badge = document.getElementById("notif-badge");
+        const count = document.getElementById("notif-count");
+        const markAll = document.getElementById("btn-mark-all-read");
 
         if (!panel || !list || !badge) return;
 
@@ -144,33 +148,47 @@ Cohere.Notify = (function () {
         } else {
             badge.hidden = true;
         }
+        if (count) {
+            count.textContent = unread + " new";
+            count.hidden = unread === 0;
+        }
+        if (markAll) markAll.disabled = unread === 0;
 
         Cohere.Utils.clearEl(list);
 
         if (notifications.length === 0) {
-            const empty = Cohere.Utils.createEl("li", { textContent: "No notifications yet.", className: "text-muted", style: "padding: 8px;" });
+            const empty = Cohere.Utils.createEl("li", { className: "notif-empty" }, [
+                Cohere.Utils.createEl("span", { className: "notif-ico" }, [Cohere.UI.icon("bell")]),
+                Cohere.Utils.createEl("span", { textContent: "No notifications yet." })
+            ]);
             list.appendChild(empty);
             return;
         }
 
         notifications.forEach(function (n) {
-            const li = Cohere.Utils.createEl("li", { dataset: { id: n.id } });
-            li.style.cursor = "pointer";
-            li.style.padding = "8px";
-            li.style.borderBottom = "1px solid var(--color-border)";
-            if (!n.read) {
-                li.style.background = "var(--color-tint)";
-                li.style.fontWeight = "500";
-            }
-
-            const msg = Cohere.Utils.createEl("div", { textContent: n.message });
-            const time = Cohere.Utils.createEl("small", {
-                textContent: Cohere.Utils.formatDateTime(n.timestamp),
-                className: "text-muted"
+            const li = Cohere.Utils.createEl("li", {
+                className: "notif-item" + (n.read ? "" : " is-unread"),
+                dataset: { id: n.id },
+                tabindex: "0",
+                role: "button"
             });
 
-            li.appendChild(msg);
-            li.appendChild(time);
+            const ico = Cohere.Utils.createEl("span", { className: "notif-ico" }, [
+                Cohere.UI.icon(TYPE_ICONS[n.type] || "bell")
+            ]);
+            const body = Cohere.Utils.createEl("div", { className: "notif-body" }, [
+                Cohere.Utils.createEl("div", { className: "notif-msg", textContent: n.message }),
+                Cohere.Utils.createEl("small", {
+                    className: "notif-time",
+                    textContent: Cohere.Utils.formatDateTime(n.timestamp)
+                })
+            ]);
+
+            li.appendChild(ico);
+            li.appendChild(body);
+            if (!n.read) {
+                li.appendChild(Cohere.Utils.createEl("span", { className: "notif-dot", "aria-label": "Unread" }));
+            }
             list.appendChild(li);
         });
     }
@@ -184,6 +202,17 @@ Cohere.Notify = (function () {
                 if (li) {
                     markRead(li.dataset.id);
                     renderPanel();
+                }
+            });
+            list.addEventListener("keydown", function (e) {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                const li = e.target.closest("li[data-id]");
+                if (li) {
+                    e.preventDefault();
+                    markRead(li.dataset.id);
+                    renderPanel();
+                    const again = list.querySelector('li[data-id="' + li.dataset.id + '"]');
+                    if (again) again.focus();
                 }
             });
         }

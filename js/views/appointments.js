@@ -2,6 +2,106 @@ window.Cohere = window.Cohere || {};
 Cohere.Appointments = (function () {
     "use strict";
 
+    // Active status filter for the list ("" = all)
+    let statusFilter = "";
+
+    // Calendar state: month being shown (first of month) and the day picked, if any
+    let calMonth = null;
+    let selectedDate = "";
+
+    const STATUS_TABS = [
+        { value: "", label: "All" },
+        { value: "Scheduled", label: "Scheduled" },
+        { value: "Completed", label: "Completed" },
+        { value: "Cancelled", label: "Cancelled" }
+    ];
+
+    // List sections, in display order
+    const GROUPS = [
+        { key: "today", label: "Today" },
+        { key: "upcoming", label: "Upcoming" },
+        { key: "earlier", label: "Earlier" },
+        { key: "cancelled", label: "Cancelled" }
+    ];
+
+    // ---- small view helpers ------------------------------------------------
+    function icon(id) {
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("class", "ic");
+        svg.setAttribute("aria-hidden", "true");
+        const use = document.createElementNS(ns, "use");
+        use.setAttribute("href", "#" + id);
+        svg.appendChild(use);
+        return svg;
+    }
+
+    function dotsIcon() {
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("class", "ic");
+        svg.setAttribute("aria-hidden", "true");
+        [5, 12, 19].forEach(function (cx) {
+            const c = document.createElementNS(ns, "circle");
+            c.setAttribute("cx", cx); c.setAttribute("cy", "12"); c.setAttribute("r", "1.6");
+            c.setAttribute("fill", "currentColor"); c.setAttribute("stroke", "none");
+            svg.appendChild(c);
+        });
+        return svg;
+    }
+
+    // Closes every open "more actions" menu
+    function closeMenus(except) {
+        document.querySelectorAll("#appt-list .sched-menu-list:not([hidden])").forEach(function (list) {
+            if (list === except) return;
+            list.hidden = true;
+            const t = list.parentNode.querySelector("[data-menu-toggle]");
+            if (t) t.setAttribute("aria-expanded", "false");
+        });
+    }
+
+    function initials(name) {
+        const parts = String(name || "?").trim().split(/\s+/);
+        const first = parts[0].charAt(0);
+        const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
+        return (first + last).toUpperCase();
+    }
+
+    function durationLabel(start, end) {
+        if (!start || !end) return "";
+        const s = start.split(":"), e = end.split(":");
+        const mins = (parseInt(e[0], 10) * 60 + parseInt(e[1], 10)) - (parseInt(s[0], 10) * 60 + parseInt(s[1], 10));
+        if (!(mins > 0)) return "";
+        const h = Math.floor(mins / 60), m = mins % 60;
+        return (h ? h + " hr" : "") + (h && m ? " " : "") + (m ? m + " min" : "");
+    }
+
+    function dateParts(iso) {
+        const p = iso.split("-");
+        const d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+        return {
+            month: d.toLocaleDateString("en-US", { month: "short" }),
+            day: d.getDate(),
+            weekday: d.toLocaleDateString("en-US", { weekday: "short" }),
+            year: d.getFullYear()
+        };
+    }
+
+    function groupKeyFor(appt, today) {
+        if (appt.status === "Cancelled") return "cancelled";
+        if (appt.date === today) return "today";
+        return appt.date > today ? "upcoming" : "earlier";
+    }
+
+    function pad2(n) { return n < 10 ? "0" + n : String(n); }
+    function toISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+    function fromISO(iso) { const p = iso.split("-"); return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10)); }
+
+    function shortLink(url) {
+        return String(url || "").replace(/^https?:\/\//i, "").replace(/\/$/, "");
+    }
+
     // Initializes the appointments view (attach listeners once)
     function init() {
         const apptForm = document.getElementById("appt-form");
@@ -25,7 +125,7 @@ Cohere.Appointments = (function () {
         const apptMembers = document.getElementById("appt-members");
         if (apptMembers) {
             apptMembers.addEventListener("change", function (e) {
-                if (e.target.matches("input[type='checkbox']")) previewConflicts();
+                if (e.target.matches("input[type='checkbox']")) { updateGroupToggles(); previewConflicts(); }
             });
         }
 
@@ -33,14 +133,27 @@ Cohere.Appointments = (function () {
         const apptList = document.getElementById("appt-list");
         if (apptList) {
             apptList.addEventListener("click", function (e) {
+                const toggle = e.target.closest("[data-menu-toggle]");
+                if (toggle) {
+                    const list = toggle.parentNode.querySelector(".sched-menu-list");
+                    const opening = list.hidden;
+                    closeMenus(opening ? list : null);
+                    list.hidden = !opening;
+                    toggle.setAttribute("aria-expanded", opening ? "true" : "false");
+                    if (opening) { const first = list.querySelector("button"); if (first) first.focus(); }
+                    return;
+                }
                 const btn = e.target.closest("[data-action]");
                 if (!btn) return;
+                closeMenus();
                 const id = btn.dataset.id;
                 const action = btn.dataset.action;
                 if (action === "edit") startEditAppt(id);
                 else if (action === "cancel-meeting") handleCancelMeeting(id);
                 else if (action === "delete") handleDeleteAppt(id);
                 else if (action === "attendance") openAttendance(id);
+                else if (action === "clear-date") { selectedDate = ""; renderApptList(); }
+                else if (action === "new-on-date") scheduleOnDate(selectedDate);
             });
         }
 
@@ -48,8 +161,64 @@ Cohere.Appointments = (function () {
         const apptSearch = document.getElementById("appt-search");
         if (apptSearch) apptSearch.addEventListener("input", renderApptList);
 
-        const filterStatus = document.getElementById("appt-filter-status");
-        if (filterStatus) filterStatus.addEventListener("change", renderApptList);
+        const tabs = document.getElementById("appt-tabs");
+        if (tabs) {
+            tabs.addEventListener("click", function (e) {
+                const tab = e.target.closest("[data-status]");
+                if (!tab) return;
+                statusFilter = tab.dataset.status;
+                renderApptList();
+            });
+        }
+
+        // Close menus on outside click or Escape
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".sched-menu")) closeMenus();
+        });
+        document.addEventListener("keydown", function (e) {
+            if (e.key !== "Escape") return;
+            const open = document.querySelector("#appt-list .sched-menu-list:not([hidden])");
+            if (!open) return;
+            const t = open.parentNode.querySelector("[data-menu-toggle]");
+            closeMenus();
+            if (t) t.focus();
+        });
+
+        // Calendar: month navigation and day selection
+        const cal = document.getElementById("appt-calendar");
+        if (cal) {
+            cal.addEventListener("click", function (e) {
+                const nav = e.target.closest("[data-cal-nav]");
+                if (nav) {
+                    const kind = nav.dataset.calNav;
+                    const base = calMonth || fromISO(Cohere.Utils.todayISO());
+                    if (kind === "today") { calMonth = new Date(fromISO(Cohere.Utils.todayISO()).getFullYear(), fromISO(Cohere.Utils.todayISO()).getMonth(), 1); }
+                    else calMonth = new Date(base.getFullYear(), base.getMonth() + (kind === "next" ? 1 : -1), 1);
+                    renderApptList();
+                    return;
+                }
+                const day = e.target.closest("[data-date]");
+                if (!day) return;
+                const iso = day.dataset.date;
+                selectedDate = selectedDate === iso ? "" : iso;
+                const d = fromISO(iso);
+                if (calMonth && (d.getMonth() !== calMonth.getMonth() || d.getFullYear() !== calMonth.getFullYear())) calMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+                renderApptList();
+            });
+        }
+
+        // "Select all / Clear" per organization in the attendee picker
+        if (apptMembers) {
+            apptMembers.addEventListener("click", function (e) {
+                const toggle = e.target.closest("[data-group-toggle]");
+                if (!toggle) return;
+                const boxes = Array.from(toggle.closest(".sched-org").querySelectorAll("input[type='checkbox']"));
+                const allChecked = boxes.every(function (cb) { return cb.checked; });
+                boxes.forEach(function (cb) { cb.checked = !allChecked; });
+                updateGroupToggles();
+                previewConflicts();
+            });
+        }
     }
 
     // Renders the entire appointments view
@@ -93,6 +262,7 @@ Cohere.Appointments = (function () {
         const members = window.Cohere.state.members.filter(function (m) { return Cohere.Permissions.canManageOrgData(m.orgId); });
         if (members.length === 0) {
             membersContainer.appendChild(Cohere.Utils.createEl("p", { textContent: "No officers available. Add members first.", className: "text-muted" }));
+            updateGroupToggles();
             return;
         }
 
@@ -111,29 +281,30 @@ Cohere.Appointments = (function () {
         Object.keys(grouped).forEach(function (orgId) {
             const org = Cohere.Store.getOrg(orgId);
             const orgName = org ? org.name : "Unknown Organization";
-            const groupDiv = Cohere.Utils.createEl("div", { className: "org-group" });
-            groupDiv.appendChild(Cohere.Utils.createEl("h4", { textContent: orgName, style: "margin: 8px 0 4px 0; font-size: 0.9rem; color: var(--color-muted);" }));
+            const groupDiv = Cohere.Utils.createEl("div", { className: "sched-org" });
 
+            const head = Cohere.Utils.createEl("div", { className: "sched-org-head" });
+            head.appendChild(Cohere.Utils.createEl("h4", { textContent: orgName }));
+            head.appendChild(Cohere.Utils.createEl("button", { type: "button", className: "sched-link-btn", textContent: "Select all", dataset: { groupToggle: "1" } }));
+            groupDiv.appendChild(head);
+
+            const chips = Cohere.Utils.createEl("div", { className: "sched-chips" });
             grouped[orgId].forEach(function (m) {
-                const label = Cohere.Utils.createEl("label", { style: "display: block; padding: 4px 0; cursor: pointer;" });
-                const checkbox = Cohere.Utils.createEl("input", { type: "checkbox", value: m.id, style: "margin-right: 8px;" });
+                const label = Cohere.Utils.createEl("label", { className: "att-chip" });
+                const checkbox = Cohere.Utils.createEl("input", { type: "checkbox", value: m.id });
                 if (editingAppt && editingAppt.memberIds.includes(m.id)) checkbox.checked = true;
                 label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(m.fullName + " — " + m.position));
-                groupDiv.appendChild(label);
+                label.appendChild(Cohere.Utils.createEl("span", { className: "avatar", textContent: initials(m.fullName) }));
+                const text = Cohere.Utils.createEl("span", { className: "att-text" });
+                text.appendChild(Cohere.Utils.createEl("span", { className: "att-name", textContent: m.fullName }));
+                text.appendChild(Cohere.Utils.createEl("span", { className: "att-role", textContent: m.position || "" }));
+                label.appendChild(text);
+                chips.appendChild(label);
             });
+            groupDiv.appendChild(chips);
             membersContainer.appendChild(groupDiv);
         });
-
-        const filterStatus = document.getElementById("appt-filter-status");
-        if (filterStatus && !filterStatus.options.length) {
-            Cohere.Utils.populateSelect(filterStatus, [
-                { value: "", label: "All statuses" },
-                { value: "Scheduled", label: "Scheduled" },
-                { value: "Completed", label: "Completed" },
-                { value: "Cancelled", label: "Cancelled" }
-            ], null);
-        }
+        updateGroupToggles();
 
         if (editingAppt) {
             document.getElementById("appt-title").value = editingAppt.title;
@@ -163,6 +334,22 @@ Cohere.Appointments = (function () {
             const defaultRadio = document.querySelector('input[name="appt-meetingType"][value="In-person"]');
             if (defaultRadio) defaultRadio.checked = true;
             toggleMeetingTypeFields();
+        }
+    }
+
+    // Keeps the per-organization toggle labels and the "N selected" pill in sync
+    function updateGroupToggles() {
+        document.querySelectorAll("#appt-members .sched-org").forEach(function (group) {
+            const boxes = group.querySelectorAll("input[type='checkbox']");
+            const all = boxes.length > 0 && Array.from(boxes).every(function (cb) { return cb.checked; });
+            const btn = group.querySelector("[data-group-toggle]");
+            if (btn) btn.textContent = all ? "Clear" : "Select all";
+        });
+        const pill = document.getElementById("appt-selected-count");
+        if (pill) {
+            const n = document.querySelectorAll("#appt-members input[type='checkbox']:checked").length;
+            pill.hidden = n === 0;
+            pill.textContent = n + " selected";
         }
     }
 
@@ -200,7 +387,7 @@ Cohere.Appointments = (function () {
 
         conflictBox.hidden = false;
         conflictBox.appendChild(Cohere.Utils.createEl("strong", { textContent: "Scheduling conflict detected:" }));
-        const list = Cohere.Utils.createEl("ul", { style: "margin: 8px 0 0 20px;" });
+        const list = Cohere.Utils.createEl("ul", { className: "sched-conflict-list" });
 
         conflicts.forEach(function (conflictAppt) {
             const overlappingOfficers = conflictAppt.memberIds.filter(function (id) { return memberIds.includes(id); });
@@ -213,17 +400,227 @@ Cohere.Appointments = (function () {
         conflictBox.appendChild(list);
     }
 
-    // Renders the appointment list with filters
+    // Opens the form with the date pre-filled (used from the empty state of a picked day)
+    function scheduleOnDate(iso) {
+        const opener = document.querySelector('[data-open="appt-panel"]');
+        if (opener) opener.click();
+        const dateEl = document.getElementById("appt-date");
+        if (dateEl && iso && !document.getElementById("appt-id").value) {
+            dateEl.value = iso;
+            previewConflicts();
+        }
+    }
+
+    // Renders the month calendar: dots on days with events, click a day to filter the list
+    function renderCalendar() {
+        const host = document.getElementById("appt-calendar");
+        if (!host) return;
+        Cohere.Utils.clearEl(host);
+
+        const today = Cohere.Utils.todayISO();
+        if (!calMonth) { const t = fromISO(today); calMonth = new Date(t.getFullYear(), t.getMonth(), 1); }
+        const year = calMonth.getFullYear(), month = calMonth.getMonth();
+
+        // date -> appointments
+        const byDate = {};
+        window.Cohere.state.appointments.forEach(function (a) {
+            (byDate[a.date] = byDate[a.date] || []).push(a);
+        });
+
+        // Header: month title + nav
+        const head = Cohere.Utils.createEl("div", { className: "cal-head" });
+        head.appendChild(Cohere.Utils.createEl("h3", { textContent: calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" }) }));
+        const nav = Cohere.Utils.createEl("div", { className: "cal-nav" });
+        nav.appendChild(Cohere.Utils.createEl("button", { type: "button", className: "cal-btn", "aria-label": "Previous month", textContent: "‹", dataset: { calNav: "prev" } }));
+        nav.appendChild(Cohere.Utils.createEl("button", { type: "button", className: "cal-btn cal-today", textContent: "Today", dataset: { calNav: "today" } }));
+        nav.appendChild(Cohere.Utils.createEl("button", { type: "button", className: "cal-btn", "aria-label": "Next month", textContent: "›", dataset: { calNav: "next" } }));
+        head.appendChild(nav);
+        host.appendChild(head);
+
+        // Weekday row
+        const grid = Cohere.Utils.createEl("div", { className: "cal-grid", role: "grid" });
+        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(function (w) {
+            grid.appendChild(Cohere.Utils.createEl("span", { className: "cal-dow", textContent: w.charAt(0), title: w, "aria-hidden": "true" }));
+        });
+
+        // Always 6 weeks so the height does not jump between months
+        const first = new Date(year, month, 1);
+        const start = new Date(year, month, 1 - first.getDay());
+        for (let i = 0; i < 42; i++) {
+            const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+            const iso = toISO(d);
+            const items = byDate[iso] || [];
+            let cls = "cal-day";
+            if (d.getMonth() !== month) cls += " is-out";
+            if (iso === today) cls += " is-today";
+            if (iso === selectedDate) cls += " is-selected";
+            if (items.length) cls += " has-events";
+
+            const label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) +
+                (items.length ? ", " + items.length + (items.length === 1 ? " event" : " events") : "");
+            const btn = Cohere.Utils.createEl("button", { type: "button", className: cls, "aria-label": label, "aria-pressed": iso === selectedDate ? "true" : "false", dataset: { date: iso } });
+            btn.appendChild(Cohere.Utils.createEl("span", { className: "n", textContent: String(d.getDate()) }));
+            const dots = Cohere.Utils.createEl("span", { className: "dots", "aria-hidden": "true" });
+            items.slice(0, 3).forEach(function (a) {
+                dots.appendChild(Cohere.Utils.createEl("i", { className: "dot dot-" + a.status.toLowerCase() }));
+            });
+            btn.appendChild(dots);
+            grid.appendChild(btn);
+        }
+        host.appendChild(grid);
+
+        // Legend
+        const legend = Cohere.Utils.createEl("div", { className: "cal-legend" });
+        [["scheduled", "Scheduled"], ["completed", "Completed"], ["cancelled", "Cancelled"]].forEach(function (l) {
+            const item = Cohere.Utils.createEl("span");
+            item.appendChild(Cohere.Utils.createEl("i", { className: "dot dot-" + l[0] }));
+            item.appendChild(document.createTextNode(l[1]));
+            legend.appendChild(item);
+        });
+        host.appendChild(legend);
+
+        // This month at a glance
+        const inMonth = window.Cohere.state.appointments.filter(function (a) {
+            const d = fromISO(a.date);
+            return d.getFullYear() === year && d.getMonth() === month && a.status !== "Cancelled";
+        }).length;
+        host.appendChild(Cohere.Utils.createEl("p", { className: "cal-summary", textContent: inMonth === 0 ? "No events this month" : inMonth + (inMonth === 1 ? " event" : " events") + " this month" }));
+    }
+
+    // Renders the status tabs (with counts) above the list
+    function renderTabs(counts) {
+        const tabs = document.getElementById("appt-tabs");
+        if (!tabs) return;
+        Cohere.Utils.clearEl(tabs);
+        STATUS_TABS.forEach(function (t) {
+            const active = t.value === statusFilter;
+            const btn = Cohere.Utils.createEl("button", {
+                type: "button",
+                className: "sched-tab" + (active ? " is-active" : ""),
+                "aria-pressed": active ? "true" : "false",
+                dataset: { status: t.value }
+            });
+            btn.appendChild(document.createTextNode(t.label));
+            btn.appendChild(Cohere.Utils.createEl("span", { className: "sched-tab-count", textContent: String(counts[t.value] || 0) }));
+            tabs.appendChild(btn);
+        });
+    }
+
+    // Builds one event card
+    function buildCard(appt, groupKey) {
+        const card = Cohere.Utils.createEl("article", { className: "sched-card is-" + groupKey });
+
+        // Date block
+        const dp = dateParts(appt.date);
+        const dateBlock = Cohere.Utils.createEl("div", { className: "sched-date", "aria-hidden": "true" });
+        dateBlock.appendChild(Cohere.Utils.createEl("span", { className: "m", textContent: dp.month }));
+        dateBlock.appendChild(Cohere.Utils.createEl("span", { className: "d", textContent: String(dp.day) }));
+        dateBlock.appendChild(Cohere.Utils.createEl("span", { className: "w", textContent: dp.weekday }));
+        card.appendChild(dateBlock);
+
+        const main = Cohere.Utils.createEl("div", { className: "sched-main" });
+
+        // Title + status
+        const top = Cohere.Utils.createEl("div", { className: "sched-top" });
+        top.appendChild(Cohere.Utils.createEl("h3", { textContent: appt.title }));
+        const statusKind = appt.status === "Completed" ? "completed" : appt.status === "Cancelled" ? "cancelled" : "pending";
+        top.appendChild(Cohere.UI.statusBadge(appt.status, statusKind));
+        main.appendChild(top);
+
+        // When + where
+        const meta = Cohere.Utils.createEl("ul", { className: "sched-meta" });
+
+        const when = Cohere.Utils.createEl("li");
+        when.appendChild(icon("i-clock"));
+        const whenText = Cohere.Utils.createEl("span", { textContent: Cohere.Utils.formatTime(appt.startTime) + " – " + Cohere.Utils.formatTime(appt.endTime) });
+        when.appendChild(whenText);
+        const dur = durationLabel(appt.startTime, appt.endTime);
+        if (dur) when.appendChild(Cohere.Utils.createEl("span", { className: "sched-dim", textContent: "· " + dur }));
+        if (dp.year !== new Date().getFullYear()) when.appendChild(Cohere.Utils.createEl("span", { className: "sched-dim", textContent: "· " + dp.year }));
+        meta.appendChild(when);
+
+        const where = Cohere.Utils.createEl("li");
+        const meetingType = appt.meetingType || "In-person";
+        if (meetingType === "Online") {
+            where.appendChild(icon("i-link"));
+            if (appt.meetingLink && /^https?:\/\//i.test(appt.meetingLink)) {
+                where.appendChild(Cohere.Utils.createEl("a", {
+                    textContent: shortLink(appt.meetingLink),
+                    href: appt.meetingLink,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    title: appt.meetingLink
+                }));
+            } else {
+                where.appendChild(Cohere.Utils.createEl("span", { className: "sched-dim", textContent: appt.meetingLink || "Online · no link yet" }));
+            }
+        } else {
+            where.appendChild(icon("i-pin"));
+            where.appendChild(Cohere.Utils.createEl("span", { textContent: appt.location || "No location set" }));
+        }
+        meta.appendChild(where);
+        main.appendChild(meta);
+
+        // Invitees: avatar stack + short names
+        const names = appt.memberIds.map(function (id) { return Cohere.Store.getMemberName(id); });
+        const people = Cohere.Utils.createEl("div", { className: "sched-people", title: names.join(", ") });
+        if (names.length === 0) {
+            people.appendChild(Cohere.Utils.createEl("span", { className: "sched-dim", textContent: "No invitees" }));
+        } else {
+            const stack = Cohere.Utils.createEl("span", { className: "avatar-stack" });
+            names.slice(0, 4).forEach(function (n) {
+                stack.appendChild(Cohere.Utils.createEl("span", { className: "avatar", textContent: initials(n) }));
+            });
+            if (names.length > 4) stack.appendChild(Cohere.Utils.createEl("span", { className: "avatar more", textContent: "+" + (names.length - 4) }));
+            people.appendChild(stack);
+            const summary = names.length <= 2 ? names.join(", ") : names.slice(0, 2).join(", ") + " +" + (names.length - 2) + " more";
+            people.appendChild(Cohere.Utils.createEl("span", { className: "sched-people-text", textContent: summary }));
+        }
+        main.appendChild(people);
+
+        if (appt.notes) {
+            main.appendChild(Cohere.Utils.createEl("p", { className: "sched-notes", textContent: appt.notes }));
+        }
+        card.appendChild(main);
+
+        // Actions
+        const actions = Cohere.Utils.createEl("div", { className: "sched-actions" });
+        actions.appendChild(Cohere.Utils.createEl("button", { type: "button", textContent: "Attendance", className: "btn", dataset: { action: "attendance", id: appt.id } }));
+        if (Cohere.Permissions.canManageMeeting(appt)) {
+            const menu = Cohere.Utils.createEl("div", { className: "sched-menu" });
+            const toggle = Cohere.Utils.createEl("button", { type: "button", className: "sched-kebab", "aria-label": "More actions for " + appt.title, "aria-haspopup": "menu", "aria-expanded": "false", dataset: { menuToggle: "1" } });
+            toggle.appendChild(dotsIcon());
+            menu.appendChild(toggle);
+
+            const list = Cohere.Utils.createEl("div", { className: "sched-menu-list", role: "menu", hidden: "" });
+            list.appendChild(Cohere.Utils.createEl("button", { type: "button", role: "menuitem", className: "sched-menu-item", textContent: "Edit event", dataset: { action: "edit", id: appt.id } }));
+            if (appt.status === "Scheduled") {
+                list.appendChild(Cohere.Utils.createEl("button", { type: "button", role: "menuitem", className: "sched-menu-item", textContent: "Cancel event", dataset: { action: "cancel-meeting", id: appt.id } }));
+            }
+            list.appendChild(Cohere.Utils.createEl("div", { className: "sched-menu-sep", role: "separator" }));
+            list.appendChild(Cohere.Utils.createEl("button", { type: "button", role: "menuitem", className: "sched-menu-item is-danger", textContent: "Delete event", dataset: { action: "delete", id: appt.id } }));
+            menu.appendChild(list);
+            actions.appendChild(menu);
+        }
+        card.appendChild(actions);
+
+        return card;
+    }
+
+    // Renders the appointment list: filters, tabs, then cards grouped by when they happen
     function renderApptList() {
         const listContainer = document.getElementById("appt-list");
         if (!listContainer) return;
         Cohere.Utils.clearEl(listContainer);
 
         const search = (document.getElementById("appt-search").value || "").toLowerCase();
-        const statusFilter = document.getElementById("appt-filter-status").value;
+        const today = Cohere.Utils.todayISO();
 
+        renderCalendar();
+
+        // Search and picked day first, so the tab counts reflect what the person is looking for
         let appointments = window.Cohere.state.appointments.slice();
-        if (statusFilter) appointments = appointments.filter(function (a) { return a.status === statusFilter; });
+        if (selectedDate) appointments = appointments.filter(function (a) { return a.date === selectedDate; });
         if (search) {
             appointments = appointments.filter(function (a) {
                 const locationOrLink = a.meetingType === "Online" ? (a.meetingLink || "") : (a.location || "");
@@ -231,82 +628,59 @@ Cohere.Appointments = (function () {
             });
         }
 
-        // Sort: upcoming first (date asc), then past (date desc), then cancelled
-        appointments.sort(function (a, b) {
-            const today = Cohere.Utils.todayISO();
-            const aIsCancelled = a.status === "Cancelled";
-            const bIsCancelled = b.status === "Cancelled";
-            const aIsUpcoming = a.date >= today && !aIsCancelled;
-            const bIsUpcoming = b.date >= today && !bIsCancelled;
+        const counts = { "": appointments.length, Scheduled: 0, Completed: 0, Cancelled: 0 };
+        appointments.forEach(function (a) { if (counts[a.status] !== undefined) counts[a.status]++; });
+        renderTabs(counts);
 
-            if (aIsUpcoming && !bIsUpcoming) return -1;
-            if (!aIsUpcoming && bIsUpcoming) return 1;
-            if (aIsCancelled && !bIsCancelled) return 1;
-            if (!aIsCancelled && bIsCancelled) return -1;
+        if (statusFilter) appointments = appointments.filter(function (a) { return a.status === statusFilter; });
 
-            if (aIsUpcoming) {
-                return a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime);
-            } else {
-                return b.date.localeCompare(a.date) || b.startTime.localeCompare(a.startTime);
-            }
-        });
+        // Chip showing the picked day, with a way to clear it
+        if (selectedDate) {
+            const chip = Cohere.Utils.createEl("div", { className: "sched-date-chip" });
+            chip.appendChild(Cohere.Utils.createEl("span", { textContent: "Showing " + fromISO(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) }));
+            chip.appendChild(Cohere.Utils.createEl("button", { type: "button", className: "sched-link-btn", textContent: "Show all", dataset: { action: "clear-date" } }));
+            listContainer.appendChild(chip);
+        }
 
         if (appointments.length === 0) {
-            listContainer.appendChild(Cohere.Utils.createEl("p", { textContent: "No events found. Use the form to schedule one.", className: "text-muted" }));
+            const filtering = !!(search || statusFilter || selectedDate);
+            const empty = Cohere.Utils.createEl("div", { className: "sched-empty" });
+            empty.appendChild(icon("i-cal"));
+            const canAdd = Cohere.Permissions.can("manageMeetings");
+            const title = selectedDate && !search && !statusFilter ? "Nothing scheduled this day" : (filtering ? "No events match your filters" : "No events yet");
+            empty.appendChild(Cohere.Utils.createEl("strong", { textContent: title }));
+            empty.appendChild(Cohere.Utils.createEl("span", { textContent: filtering ? "Try a different day, search or status." : (canAdd ? "Use Schedule Meeting to add your first one." : "Events will appear here once they are scheduled.") }));
+            if (selectedDate && canAdd) {
+                empty.appendChild(Cohere.Utils.createEl("button", { type: "button", className: "btn", textContent: "Schedule on this day", dataset: { action: "new-on-date" } }));
+            }
+            listContainer.appendChild(empty);
             return;
         }
 
-        appointments.forEach(function (appt) {
-            const card = Cohere.Utils.createEl("div", { className: "card", style: "margin-bottom: 16px;" });
-            const header = Cohere.Utils.createEl("div", { style: "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;" });
-            header.appendChild(Cohere.Utils.createEl("h3", { textContent: appt.title, style: "margin: 0; font-size: 1.1rem;" }));
+        // Bucket into groups
+        const buckets = {};
+        GROUPS.forEach(function (g) { buckets[g.key] = []; });
+        appointments.forEach(function (a) { buckets[groupKeyFor(a, today)].push(a); });
 
-            const statusKind = appt.status === "Completed" ? "completed" : appt.status === "Cancelled" ? "cancelled" : "pending";
-            header.appendChild(Cohere.UI.statusBadge(appt.status, statusKind));
-            card.appendChild(header);
+        GROUPS.forEach(function (g) {
+            const items = buckets[g.key];
+            if (!items.length) return;
+            const ascending = g.key === "today" || g.key === "upcoming";
+            items.sort(function (a, b) {
+                const cmp = a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime);
+                return ascending ? cmp : -cmp;
+            });
 
-            card.appendChild(Cohere.Utils.createEl("div", { textContent: Cohere.Utils.formatDate(appt.date) + " • " + Cohere.Utils.formatTime(appt.startTime) + "–" + Cohere.Utils.formatTime(appt.endTime), style: "font-weight: 500; margin-bottom: 4px;" }));
+            const section = Cohere.Utils.createEl("section", { className: "sched-group is-" + g.key });
+            const head = Cohere.Utils.createEl("div", { className: "sched-group-head" });
+            head.appendChild(Cohere.Utils.createEl("h3", { textContent: g.label }));
+            head.appendChild(Cohere.Utils.createEl("span", { className: "sched-count-pill", textContent: String(items.length) }));
+            section.appendChild(head);
 
-            // Display location or meeting link based on type
-            const meetingType = appt.meetingType || "In-person";
-            if (meetingType === "Online") {
-                const linkDiv = Cohere.Utils.createEl("div", { style: "margin-bottom: 8px;" });
-                linkDiv.appendChild(Cohere.Utils.createEl("span", { textContent: "🔗 Online: ", style: "font-weight: 500;" }));
-                const link = Cohere.Utils.createEl("a", {
-                    textContent: appt.meetingLink || "No link provided",
-                    href: appt.meetingLink || "#",
-                    target: "_blank",
-                    rel: "noopener noreferrer"
-                });
-                linkDiv.appendChild(link);
-                card.appendChild(linkDiv);
-            } else {
-                card.appendChild(Cohere.Utils.createEl("div", { textContent: "📍 " + (appt.location || "No location"), style: "margin-bottom: 8px;" }));
-            }
-
-            const invitees = Cohere.Utils.createEl("div", { style: "margin-bottom: 8px;" });
-            invitees.appendChild(Cohere.Utils.createEl("strong", { textContent: "Invitees: ", style: "font-size: 0.875rem;" }));
-            invitees.appendChild(document.createTextNode(appt.memberIds.map(function (id) { return Cohere.Store.getMemberName(id); }).join(", ")));
-            card.appendChild(invitees);
-
-            if (appt.notes) {
-                card.appendChild(Cohere.Utils.createEl("div", { textContent: "Notes: " + appt.notes, className: "text-muted", style: "font-size: 0.875rem; margin-bottom: 8px;" }));
-            }
-
-            const actions = Cohere.Utils.createEl("div", { style: "display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;" });
-            const canManage = Cohere.Permissions.canManageMeeting(appt);
-
-            if (canManage) {
-                actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Edit", className: "btn btn-secondary", dataset: { action: "edit", id: appt.id } }));
-                if (appt.status === "Scheduled") {
-                    actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Cancel Event", className: "btn btn-danger", dataset: { action: "cancel-meeting", id: appt.id } }));
-                }
-                actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Delete", className: "btn btn-danger", dataset: { action: "delete", id: appt.id } }));
-            }
-            actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Attendance", className: "btn", dataset: { action: "attendance", id: appt.id } }));
-
-            card.appendChild(actions);
-            listContainer.appendChild(card);
+            const grid = Cohere.Utils.createEl("div", { className: "sched-grid" });
+            items.forEach(function (appt) { grid.appendChild(buildCard(appt, g.key)); });
+            section.appendChild(grid);
+            listContainer.appendChild(section);
         });
     }
 
@@ -417,6 +791,7 @@ Cohere.Appointments = (function () {
             const membersError = form.querySelector("#appt-members + .field-error");
             if (membersError) membersError.remove();
             document.querySelectorAll("#appt-members input[type='checkbox']").forEach(function (cb) { cb.checked = false; });
+            updateGroupToggles();
             const conflictBox = document.getElementById("appt-conflict-box");
             if (conflictBox) {
                 conflictBox.hidden = true;

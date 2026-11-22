@@ -2,16 +2,69 @@ window.Cohere = window.Cohere || {};
 Cohere.UI = (function () {
     "use strict";
 
-    // Shows a toast message
+    // Builds an <svg><use/></svg> icon from the sprite in index.html
+    function icon(name) {
+        const NS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("class", "ic");
+        svg.setAttribute("aria-hidden", "true");
+        const use = document.createElementNS(NS, "use");
+        use.setAttribute("href", "#i-" + name);
+        svg.appendChild(use);
+        return svg;
+    }
+
+    const TOAST_ICONS = { success: "check", error: "cross", info: "info" };
+
+    // Shows a toast message. Longer messages stay up longer; hovering pauses the timer.
     function showToast(message, type) {
         const container = document.getElementById("toast-container");
         if (!container) return;
-        const toast = Cohere.Utils.createEl("div", { className: "toast toast-" + (type || "info"), textContent: message });
+        type = TOAST_ICONS[type] ? type : "info";
+
+        const toast = Cohere.Utils.createEl("div", {
+            className: "toast toast-" + type,
+            role: type === "error" ? "alert" : "status"
+        });
+        const ico = Cohere.Utils.createEl("span", { className: "toast-ico" }, [icon(TOAST_ICONS[type])]);
+        const msg = Cohere.Utils.createEl("div", { className: "toast-msg", textContent: message });
+        const close = Cohere.Utils.createEl("button", {
+            type: "button", className: "toast-close", "aria-label": "Dismiss"
+        }, [icon("x")]);
+        const bar = Cohere.Utils.createEl("span", { className: "toast-bar", "aria-hidden": "true" });
+
+        const text = String(message || "");
+        const duration = Math.min(8000, Math.max(type === "error" ? 4500 : 3000, text.length * 55));
+        bar.style.animationDuration = duration + "ms";
+
+        toast.appendChild(ico);
+        toast.appendChild(msg);
+        toast.appendChild(close);
+        toast.appendChild(bar);
         container.appendChild(toast);
-        setTimeout(function () {
+
+        let timer = null;
+        let remaining = duration;
+        let startedAt = 0;
+
+        function dismiss() {
+            clearTimeout(timer);
+            if (toast.classList.contains("toast-hide")) return;
             toast.classList.add("toast-hide");
-            setTimeout(function () { toast.remove(); }, 300);
-        }, 3000);
+            setTimeout(function () { toast.remove(); }, 260);
+        }
+        function start() {
+            startedAt = Date.now();
+            timer = setTimeout(dismiss, remaining);
+        }
+
+        toast.addEventListener("mouseenter", function () {
+            clearTimeout(timer);
+            remaining -= Date.now() - startedAt;
+        });
+        toast.addEventListener("mouseleave", start);
+        close.addEventListener("click", dismiss);
+        start();
     }
 
     // Opens a modal
@@ -126,5 +179,5 @@ Cohere.UI = (function () {
 
     attachGlobalListeners();
 
-    return { showToast, openModal, closeModal, confirmAction, showFieldErrors, clearFieldErrors, clearFieldError, toggleSidebar, statusBadge, applyPermissions };
+    return { icon, showToast, openModal, closeModal, confirmAction, showFieldErrors, clearFieldErrors, clearFieldError, toggleSidebar, statusBadge, applyPermissions };
 })();

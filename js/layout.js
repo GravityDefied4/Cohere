@@ -70,6 +70,22 @@ Cohere.Layout = (function () {
         Cohere.UI.showToast("Welcome, " + Cohere.Permissions.getActor().name + ".", "success");
     }
 
+    // ---- Log out confirmation -----------------------------------------------
+    function openLogoutDialog() {
+        $("sidebar").classList.remove("sidebar-open");
+        $("logout-overlay").hidden = false;
+        $("logout-cancel").focus();
+    }
+    function closeLogoutDialog() {
+        $("logout-overlay").hidden = true;
+        $("btn-logout").focus();
+    }
+    function confirmLogout() {
+        $("logout-overlay").hidden = true;
+        logout();
+        Cohere.UI.showToast("You have been logged out.", "info");
+    }
+
     function logout() {
         Cohere.Permissions.signOut();
         closeAllPanels();
@@ -126,7 +142,20 @@ Cohere.Layout = (function () {
     function init() {
         initTheme();
         $("login-form").addEventListener("submit", handleLogin);
-        $("btn-logout").addEventListener("click", logout);
+        $("btn-logout").addEventListener("click", openLogoutDialog);
+        $("logout-cancel").addEventListener("click", closeLogoutDialog);
+        $("logout-confirm").addEventListener("click", confirmLogout);
+        $("logout-overlay").addEventListener("click", function (e) { if (e.target.id === "logout-overlay") closeLogoutDialog(); });
+        document.addEventListener("keydown", function (e) {
+            if ($("logout-overlay").hidden) return;
+            if (e.key === "Escape") { e.stopPropagation(); closeLogoutDialog(); }
+            else if (e.key === "Tab") {
+                // keep focus inside the dialog
+                const a = $("logout-cancel"), b = $("logout-confirm");
+                if (e.shiftKey && document.activeElement === a) { e.preventDefault(); b.focus(); }
+                else if (!e.shiftKey && document.activeElement === b) { e.preventDefault(); a.focus(); }
+            }
+        }, true);
         $("notif-close").addEventListener("click", function () { $("notif-panel").hidden = true; });
         $("sidebar-scrim").addEventListener("click", function () { $("sidebar").classList.remove("sidebar-open"); });
 

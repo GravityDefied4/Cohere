@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="css/content.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/organization.css">
+    <link rel="stylesheet" href="css/schedule.css">
 </head>
 
 <body>
@@ -104,6 +105,10 @@
             <symbol id="i-checkall" viewBox="0 0 24 24">
                 <path d="M2.5 12.5L6.5 16.5 14 8.5M10 16.5l1 1L21 7.5" />
             </symbol>
+            <symbol id="i-info" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 11v5M12 8v.01" />
+            </symbol>
             <symbol id="i-undo" viewBox="0 0 24 24">
                 <path d="M4 9h10a6 6 0 010 12H9M4 9l4-4M4 9l4 4" />
             </symbol>
@@ -116,6 +121,14 @@
             </symbol>
             <symbol id="i-plus" viewBox="0 0 24 24">
                 <path d="M12 5v14M5 12h14" />
+            </symbol>
+            <symbol id="i-pin" viewBox="0 0 24 24">
+                <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z" />
+                <circle cx="12" cy="10" r="2.3" />
+            </symbol>
+            <symbol id="i-link" viewBox="0 0 24 24">
+                <path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1" />
+                <path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" />
             </symbol>
         </defs>
     </svg>
@@ -221,7 +234,7 @@
                         <span id="avatar" class="avatar" aria-hidden="true">A</span>
                         <div id="notif-panel" hidden>
                             <div class="np-head">
-                                <h3>Notifications</h3><button type="button" id="notif-close" class="icon-btn"
+                                <h3>Notifications</h3><span id="notif-count" class="np-count" hidden></span><button type="button" id="notif-close" class="icon-btn"
                                     aria-label="Close"><svg class="ic" aria-hidden="true">
                                         <use href="#i-x" />
                                     </svg></button>
@@ -342,8 +355,6 @@
                                         class="btn btn-secondary" hidden>Cancel</button></div>
                             </form>
                         </section>
-                        <p class="view-only-note" data-permission-note="manageMembers" hidden>Only the organization
-                            president can add or manage members.</p>
                         <div class="toolbar">
                             <div class="search"><input type="search" id="member-search" placeholder="Name"></div>
                             <select id="member-filter-office" aria-label="Office or committee"></select>
@@ -416,8 +427,6 @@
                                         type="submit" id="task-submit" class="btn">Add Task</button></div>
                             </form>
                         </section>
-                        <p class="view-only-note" data-permission-note="manageTasks" hidden>You do not have permission
-                            to manage tasks.</p>
                         <div class="toolbar">
                             <div class="search"><input type="search" id="task-search" placeholder="Task name"></div>
                             <select id="task-filter-assignee"></select><select id="task-filter-status"></select><select
@@ -441,13 +450,18 @@
                     </section>
 
                     <section class="view" id="view-appointments" hidden>
-                        <div class="section-head">
-                            <h2>Scheduled Events</h2><button type="button" class="btn" data-open="appt-panel"
+                        <div class="section-head sched-head">
+                            <div class="sched-head-text">
+                                <h2>Scheduled Events</h2>
+                                <p class="sched-sub">Plan meetings, catch conflicts early and jump straight to attendance.</p>
+                            </div>
+                            <button type="button" class="btn" data-open="appt-panel"
                                 data-permission="manageMeetings"><svg class="ic" aria-hidden="true">
                                     <use href="#i-plus" />
                                 </svg>Schedule Meeting</button>
                         </div>
-                        <section class="form-panel" id="appt-panel" hidden>
+
+                        <section class="form-panel sched-form" id="appt-panel" hidden>
                             <div class="panel-head">
                                 <h2>Schedule an event</h2><button type="button" class="icon-btn panel-close"
                                     aria-label="Close form"><svg class="ic" aria-hidden="true">
@@ -456,12 +470,12 @@
                             </div>
                             <form id="appt-form" class="grid-2" novalidate>
                                 <input type="hidden" id="appt-id">
-                                <div class="field "><label for="appt-title">Event title</label><input type="text"
-                                        id="appt-title"></div>
-                                <div class="field "><label for="appt-date">Date</label><input type="date"
+
+                                <div class="field span-2"><label for="appt-title">Event title</label><input type="text"
+                                        id="appt-title" placeholder="e.g., Officer Meeting"></div>
+
+                                <div class="field"><label for="appt-date">Date</label><input type="date"
                                         id="appt-date"></div>
-                                <div class="field "><label for="appt-notes">Agenda / notes</label><textarea
-                                        id="appt-notes"></textarea></div>
                                 <div class="field">
                                     <div class="two">
                                         <div class="field"><label for="appt-start">Start time</label><input type="time"
@@ -470,6 +484,7 @@
                                                 id="appt-end"></div>
                                     </div>
                                 </div>
+
                                 <div class="field"><span class="lbl">Mode</span>
                                     <div class="seg"><label><input type="radio" name="appt-meetingType"
                                                 value="In-person" checked><span>In-person</span></label><label><input
@@ -482,8 +497,14 @@
                                 <div class="field" id="appt-meetingLink-wrap" hidden><label
                                         for="appt-meetingLink">Meeting link</label><input type="url"
                                         id="appt-meetingLink" placeholder="https://gmeet.google.com/..."></div>
+
+                                <div class="field span-2"><label for="appt-notes">Agenda / notes <span
+                                            class="sched-optional">(optional)</span></label><textarea
+                                        id="appt-notes" placeholder="What will this meeting cover?"></textarea></div>
+
                                 <fieldset class="span-2">
-                                    <legend>Officer attendees</legend>
+                                    <legend>Officer attendees <span id="appt-selected-count"
+                                            class="sched-count-pill" hidden></span></legend>
                                     <div id="appt-members"></div>
                                 </fieldset>
                                 <div id="appt-conflict-box" class="conflict-box span-2" hidden></div>
@@ -492,13 +513,18 @@
                                         hidden>Cancel</button></div>
                             </form>
                         </section>
-                        <p class="view-only-note" data-permission-note="manageMeetings" hidden>You do not have
-                            permission to manage meetings.</p>
-                        <div class="toolbar">
-                            <div class="search"><input type="search" id="appt-search" placeholder="Search events"></div>
-                            <select id="appt-filter-status"></select>
+
+                        <div class="sched-layout">
+                            <div class="sched-col">
+                                <div class="sched-toolbar">
+                                    <div class="search"><input type="search" id="appt-search" placeholder="Search by title, location or link"
+                                            aria-label="Search events"></div>
+                                    <div id="appt-tabs" class="sched-tabs" role="group" aria-label="Filter by status"></div>
+                                </div>
+                                <div id="appt-list" class="appt-list sched-list"></div>
+                            </div>
+                            <aside id="appt-calendar" class="sched-cal" aria-label="Event calendar"></aside>
                         </div>
-                        <div id="appt-list" class="appt-list"></div>
                     </section>
 
                     <section class="view" id="view-attendance" hidden>
@@ -510,12 +536,11 @@
                                 <div class="att-focus" role="region" aria-label="Student attendance">
                                     <div id="attendance-student"></div>
                                 </div>
-                                <p class="view-only-note" data-permission-note="markAttendance" hidden>You do not have
-                                    permission to mark attendance.</p>
                             </div>
                             <div class="split-main">
                                 <div class="att-list-head">
                                     <h2 class="card-title">Student masterlist</h2>
+                                    <select id="attendance-filter-status" aria-label="Filter by status"></select>
                                     <div data-permission="markAttendance" class="actions att-bulk"><button
                                             id="btn-mark-all-present" class="btn btn-secondary btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-checkall" /></svg>Mark all present</button><button
                                             id="btn-clear-attendance" class="btn btn-danger-o btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-undo" /></svg>Clear</button><span id="attendance-actions-hint" hidden></span></div>
@@ -580,8 +605,6 @@
                                 <div class="field file"><label for="input-import">Import backup</label><input
                                         type="file" id="input-import" accept=".json"></div>
                             </div>
-                            <p class="view-only-note" data-permission-note="manageData" hidden>You do not have
-                                permission to manage data.</p>
                             <div class="actions"><button id="btn-export" class="btn btn-secondary">Export Data</button><button
                                     id="btn-export-accounts" class="btn btn-secondary"
                                     data-permission="manageData">Export accounts file</button>
@@ -599,6 +622,21 @@
         <div id="modal" role="dialog" aria-modal="true">
             <h2 id="modal-title"></h2>
             <div id="modal-body"></div><button id="modal-close" class="btn btn-secondary">Close</button>
+        </div>
+    </div>
+
+    <div id="logout-overlay" hidden>
+        <div id="logout-dialog" role="alertdialog" aria-modal="true" aria-labelledby="logout-title"
+            aria-describedby="logout-desc">
+            <span class="logout-ico" aria-hidden="true"><svg class="ic">
+                    <use href="#i-out" />
+                </svg></span>
+            <h2 id="logout-title">Log out of Cohere?</h2>
+            <p id="logout-desc">You will need to sign in again to get back to your dashboard.</p>
+            <div class="logout-actions">
+                <button type="button" id="logout-cancel" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="logout-confirm" class="btn">Log out</button>
+            </div>
         </div>
     </div>
 

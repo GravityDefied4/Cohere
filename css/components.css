@@ -1,31 +1,72 @@
 /* ==========================================================================
-   Notifications and toasts
+   Notifications panel + toasts
+   --------------------------------------------------------------------------
+   Same language as the content area: flat white surface, 1px cool-grey
+   outline, 16px containers / 10px controls, cobalt accent. Colours come from
+   the --ct-* tokens (defined in content.css for #notif-panel and
+   #toast-container, with dark-mode values), so both themes follow.
    ========================================================================== */
 
-/* Notifications dropdown + toasts */
+/* ---- Notifications panel ------------------------------------------------ */
 #notif-panel {
     position: absolute;
     top: calc(100% + 10px);
     right: 0;
-    width: 360px;
+    width: 380px;
     max-width: calc(100vw - 32px);
-    background: var(--white);
-    border: 1.5px solid var(--line);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    box-shadow: 0 20px 50px rgba(6, 6, 6, .22);
+    background: var(--ct-surface);
+    color: var(--ct-text);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+    padding: 14px;
+    box-shadow: 0 20px 50px rgba(6, 6, 6, .18);
     z-index: 200;
+    animation: notifIn .18s ease;
 }
 
 .np-head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 10px;
+    padding: 2px 2px 12px;
     margin-bottom: 10px;
+    border-bottom: 1px solid var(--ct-line-soft);
 }
 
 .np-head h3 {
     font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    margin: 0;
+}
+
+.np-count {
+    padding: 2px 9px;
+    border-radius: 99px;
+    background: var(--ct-tint);
+    border: 1px solid var(--ct-tint-line);
+    color: var(--ct-accent);
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.np-head .icon-btn {
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    color: var(--ct-muted);
+}
+
+.np-head .icon-btn:hover {
+    background: var(--ct-surface-2);
+    color: var(--ct-text);
+}
+
+.np-head .icon-btn .ic {
+    width: 18px;
+    height: 18px;
 }
 
 #notif-list {
@@ -34,29 +75,162 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-bottom: 12px;
+    margin: 0 0 12px;
+    padding: 0 2px 0 0;
+    list-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ct-line) transparent;
 }
 
-#notif-list li {
-    background: var(--paper);
-    border-radius: 12px;
-    padding: 10px 12px !important;
-    border: 0 !important;
-    font-size: .85rem;
+.notif-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: var(--ct-surface);
+    border: 1px solid var(--ct-line-soft);
+    border-radius: var(--ct-r-sm);
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
 }
 
-#notif-list li[style*="background"] {
-    background: var(--haze-soft) !important;
-    box-shadow: inset 3px 0 0 var(--cobalt);
+.notif-item:hover {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-line);
 }
 
-#notif-list small {
+.notif-item:focus-visible {
+    outline: none;
+    border-color: var(--ct-btn);
+    box-shadow: 0 0 0 3px var(--ct-ring);
+}
+
+.notif-item.is-unread {
+    background: var(--ct-tint);
+    border-color: var(--ct-tint-line);
+}
+
+.notif-item.is-unread:hover {
+    background: var(--ct-tint);
+}
+
+.notif-ico {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--ct-surface-2);
+    border: 1px solid var(--ct-line-soft);
+    color: var(--ct-muted);
+}
+
+.notif-ico .ic {
+    width: 17px;
+    height: 17px;
+}
+
+.notif-item.is-unread .notif-ico {
+    background: var(--ct-surface);
+    border-color: var(--ct-tint-line);
+    color: var(--ct-accent);
+}
+
+.notif-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.notif-msg {
+    font-size: .86rem;
+    line-height: 1.4;
+    color: var(--ct-muted);
+    overflow-wrap: anywhere;
+}
+
+.notif-item.is-unread .notif-msg {
+    color: var(--ct-text);
+    font-weight: 500;
+}
+
+.notif-time {
     display: block;
-    color: var(--color-muted);
-    font-weight: 400;
-    margin-top: 2px;
+    margin-top: 4px;
+    font-size: .74rem;
+    color: var(--ct-muted);
 }
 
+.notif-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: var(--ct-accent-2);
+}
+
+.notif-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 28px 12px;
+    text-align: center;
+    color: var(--ct-muted);
+    font-size: .86rem;
+    cursor: default;
+}
+
+.notif-empty .notif-ico {
+    width: 44px;
+    height: 44px;
+}
+
+.notif-empty .notif-ico .ic {
+    width: 20px;
+    height: 20px;
+}
+
+#notif-panel #btn-mark-all-read {
+    width: 100%;
+    padding: 9px 14px;
+    border-radius: var(--ct-r-sm);
+    border: 1px solid var(--ct-ink);
+    background: transparent;
+    color: var(--ct-text);
+    font-size: .82rem;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+#notif-panel #btn-mark-all-read:hover:not(:disabled) {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-ink);
+    color: var(--ct-text);
+}
+
+#notif-panel #btn-mark-all-read:disabled {
+    border-color: var(--ct-line);
+    color: var(--ct-muted);
+    cursor: default;
+    opacity: .7;
+}
+
+@keyframes notifIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* ---- Toasts ------------------------------------------------------------- */
 #toast-container {
     position: fixed;
     bottom: 24px;
@@ -65,37 +239,122 @@
     flex-direction: column;
     gap: 10px;
     z-index: 1000;
+    pointer-events: none;
 }
 
 .toast {
-    background: var(--white);
-    color: var(--text);
-    border: 1.5px solid var(--line);
-    border-left-width: 8px;
-    border-radius: 14px;
-    padding: 12px 18px;
-    font-size: .88rem;
-    font-weight: 500;
-    box-shadow: 0 14px 34px rgba(6, 6, 6, .2);
-    animation: slideIn .3s ease;
-    max-width: 340px;
+    --toast-color: var(--ct-accent-2);
+    --toast-tint: var(--ct-tint);
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 360px;
+    max-width: 100%;
+    padding: 12px 12px 14px 12px;
+    background: var(--ct-surface);
+    color: var(--ct-text);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r-sm);
+    box-shadow: 0 8px 24px rgba(6, 6, 6, .12);
+    overflow: hidden;
+    pointer-events: auto;
+    animation: slideIn .25s ease;
 }
 
 .toast-success {
-    border-left-color: var(--color-success);
+    --toast-color: var(--ct-success);
+    --toast-tint: var(--ct-success-tint);
 }
 
 .toast-error {
-    border-left-color: var(--color-danger);
+    --toast-color: var(--ct-danger);
+    --toast-tint: var(--ct-danger-tint);
 }
 
 .toast-info {
-    border-left-color: var(--cobalt-2);
+    --toast-color: var(--ct-accent-2);
+    --toast-tint: var(--ct-tint);
+}
+
+.toast-ico {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--toast-tint);
+    color: var(--toast-color);
+}
+
+.toast-ico .ic {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+}
+
+.toast-msg {
+    flex: 1;
+    min-width: 0;
+    padding-top: 4px;
+    font-size: .86rem;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.toast-close {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    margin: 2px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--ct-muted);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.toast-close:hover {
+    background: var(--ct-surface-2);
+    color: var(--ct-text);
+}
+
+.toast-close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--ct-ring);
+}
+
+.toast-close .ic {
+    width: 14px;
+    height: 14px;
+}
+
+.toast-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    background: var(--toast-color);
+    opacity: .55;
+    transform-origin: left;
+    animation: toastBar linear forwards;
+}
+
+.toast:hover .toast-bar {
+    animation-play-state: paused;
 }
 
 .toast-hide {
     opacity: 0;
-    transition: opacity .3s;
+    transform: translateX(24px);
+    transition: opacity .25s, transform .25s;
 }
 
 @keyframes slideIn {
@@ -107,6 +366,16 @@
     to {
         transform: none;
         opacity: 1;
+    }
+}
+
+@keyframes toastBar {
+    from {
+        transform: scaleX(1);
+    }
+
+    to {
+        transform: scaleX(0);
     }
 }
 
@@ -771,4 +1040,122 @@ td:last-child .btn+.btn {
     height: 100%;
     border-radius: 99px;
     transition: width .4s;
+}
+
+/* ==========================================================================
+   Log out confirmation dialog (same look as the modal)
+   ========================================================================== */
+#logout-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 6, 6, .45);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 950;
+    padding: 16px;
+    animation: logoutFade .15s ease;
+}
+
+#logout-dialog {
+    width: 100%;
+    max-width: 400px;
+    padding: 28px;
+    background: var(--ct-surface);
+    color: var(--ct-text);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+    box-shadow: 0 20px 50px rgba(6, 6, 6, .18);
+    text-align: center;
+    animation: logoutPop .2s ease;
+}
+
+.logout-ico {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: var(--ct-danger-tint);
+    border: 1px solid rgba(201, 48, 42, .35);
+    color: var(--ct-danger);
+}
+
+.logout-ico .ic {
+    width: 22px;
+    height: 22px;
+}
+
+#logout-dialog h2 {
+    margin: 0 0 6px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+#logout-dialog p {
+    margin: 0 0 22px;
+    font-size: .88rem;
+    line-height: 1.5;
+    color: var(--ct-muted);
+}
+
+.logout-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.logout-actions .btn {
+    flex: 1;
+    border-radius: var(--ct-r-sm);
+    background: #c9302a;
+    border-color: #c9302a;
+    color: #fff;
+    box-shadow: none;
+}
+
+.logout-actions .btn:hover {
+    background: #a8231e;
+    border-color: #a8231e;
+}
+
+.logout-actions .btn-secondary {
+    background: transparent;
+    border-color: var(--ct-ink);
+    color: var(--ct-text);
+}
+
+.logout-actions .btn-secondary:hover {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-ink);
+}
+
+.logout-actions .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(201, 48, 42, .28);
+}
+
+@keyframes logoutFade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes logoutPop {
+    from { opacity: 0; transform: translateY(8px) scale(.97); }
+    to { opacity: 1; transform: none; }
+}
+:root[data-theme="dark"] .logout-ico {
+    border-color: rgba(255, 122, 112, .4);
+}
+
+:root[data-theme="dark"] .logout-actions .btn:not(.btn-secondary) {
+    background: #d9453d;
+    border-color: #d9453d;
+}
+
+:root[data-theme="dark"] .logout-actions .btn:not(.btn-secondary):hover {
+    background: #e5594f;
+    border-color: #e5594f;
 }

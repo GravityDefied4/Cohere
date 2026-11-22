@@ -11,6 +11,9 @@ Cohere.Attendance = (function () {
     // Current masterlist search text (module state, not persisted)
     let searchQuery = "";
 
+    // Current masterlist status filter: "", "present", "absent", "excused", or "unmarked"
+    let statusFilter = "";
+
     // Short "Ana Cruz marked Present" confirmation shown for a moment after marking,
     // and a flag so the next student's card slides in (both are module state only)
     let justMarked = "";
@@ -44,6 +47,14 @@ Cohere.Attendance = (function () {
         if (search) {
             search.addEventListener("input", function () {
                 searchQuery = search.value;
+                renderAttendanceTable();
+            });
+        }
+
+        const filterStatus = document.getElementById("attendance-filter-status");
+        if (filterStatus) {
+            filterStatus.addEventListener("change", function () {
+                statusFilter = filterStatus.value;
                 renderAttendanceTable();
             });
         }
@@ -244,15 +255,29 @@ Cohere.Attendance = (function () {
         });
     }
 
-    // Invited students that match the search box (name or student ID), still A-Z
+    // Invited students that match the search box (name or student ID) and the
+    // status filter (present/absent/excused/unmarked), still A-Z. Open to everyone.
     function getVisibleMembers() {
         const q = searchQuery.trim().toLowerCase();
-        const invited = getInvitedMembers();
-        if (!q) return invited;
-        return invited.filter(function (m) {
-            return String(m.fullName || "").toLowerCase().indexOf(q) !== -1 ||
-                String(m.studentId || "").toLowerCase().indexOf(q) !== -1;
-        });
+        let list = getInvitedMembers();
+
+        if (q) {
+            list = list.filter(function (m) {
+                return String(m.fullName || "").toLowerCase().indexOf(q) !== -1 ||
+                    String(m.studentId || "").toLowerCase().indexOf(q) !== -1;
+            });
+        }
+
+        if (statusFilter) {
+            const appt = getSelectedAppointment();
+            const statusMap = appt ? getAttendanceMap(appt.id) : {};
+            list = list.filter(function (m) {
+                const current = statusMap[m.id] || "unmarked";
+                return current === statusFilter;
+            });
+        }
+
+        return list;
     }
 
     // Returns the student that follows memberId in the visible masterlist (or null if last)
@@ -302,6 +327,17 @@ Cohere.Attendance = (function () {
         const tbody = document.getElementById("attendance-table-body");
         if (!tbody) return;
 
+        const filterStatus = document.getElementById("attendance-filter-status");
+        if (filterStatus && !filterStatus.options.length) {
+            Cohere.Utils.populateSelect(filterStatus, [
+                { value: "", label: "All statuses" },
+                { value: "present", label: "Present" },
+                { value: "absent", label: "Absent" },
+                { value: "excused", label: "Excused" },
+                { value: "unmarked", label: "Unmarked" }
+            ], null);
+        }
+
         Cohere.Utils.clearEl(tbody);
 
         const appt = getSelectedAppointment();
@@ -335,7 +371,9 @@ Cohere.Attendance = (function () {
         if (visible.length === 0) {
             const tr = Cohere.Utils.createEl("tr");
             tr.appendChild(Cohere.Utils.createEl("td", {
-                textContent: "No students match \u201C" + searchQuery.trim() + "\u201D.",
+                textContent: searchQuery.trim()
+                    ? "No students match \u201C" + searchQuery.trim() + "\u201D."
+                    : "No students match this filter.",
                 colSpan: "2",
                 className: "text-muted"
             }));

@@ -1,0 +1,1209 @@
+/* ==========================================================================
+   Schedule tab
+   --------------------------------------------------------------------------
+   Loaded after content.css. Uses the same --ct-* tokens so light and dark
+   mode, radii and the cobalt accent match the other tabs. Everything is
+   scoped to #view-appointments, so nothing here leaks into other views.
+   ========================================================================== */
+
+#main #view-appointments {
+    --sc-gap: 14px;
+}
+
+/* 1) Header ---------------------------------------------------------------- */
+#main #view-appointments .sched-head {
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+#main #view-appointments .sched-sub {
+    margin: 4px 0 0;
+    font-size: .875rem;
+    color: var(--ct-muted);
+    max-width: 52ch;
+}
+
+/* 2) Toolbar: search + status tabs ---------------------------------------- */
+#main #view-appointments .sched-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+
+#main #view-appointments .sched-toolbar .search {
+    flex: 1 1 260px;
+    max-width: 420px;
+}
+
+#main #view-appointments .sched-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    margin-left: auto;
+    background: var(--ct-surface-2);
+    border: 1px solid var(--ct-line);
+    border-radius: 12px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+#main #view-appointments .sched-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+#main #view-appointments .sched-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ct-muted);
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+}
+
+#main #view-appointments .sched-tab:hover {
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-tab.is-active {
+    background: var(--ct-surface);
+    border-color: var(--ct-line);
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-tab:focus-visible {
+    outline: 2px solid var(--ct-accent-2);
+    outline-offset: 1px;
+}
+
+#main #view-appointments .sched-tab-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: var(--ct-line-soft);
+    color: var(--ct-muted);
+    font-size: .72rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+#main #view-appointments .sched-tab.is-active .sched-tab-count {
+    background: var(--ct-tint);
+    color: var(--ct-accent);
+}
+
+/* 3) Groups ---------------------------------------------------------------- */
+#main #view-appointments .sched-list {
+    display: block;
+}
+
+#main #view-appointments .sched-group {
+    margin-top: 28px;
+}
+
+#main #view-appointments .sched-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+#main #view-appointments .sched-group-head::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--ct-line-soft);
+    order: 3;
+}
+
+#main #view-appointments .sched-group-head h3 {
+    margin: 0;
+    font-size: .95rem;
+    font-weight: 600;
+    letter-spacing: -.005em;
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-group.is-today .sched-group-head h3 {
+    color: var(--ct-accent);
+}
+
+#main #view-appointments .sched-group.is-earlier .sched-group-head h3,
+#main #view-appointments .sched-group.is-cancelled .sched-group-head h3 {
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .sched-count-pill {
+    padding: 1px 8px;
+    border-radius: 99px;
+    background: var(--ct-tint);
+    color: var(--ct-accent);
+    font-size: .72rem;
+    font-weight: 700;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+#main #view-appointments .sched-group.is-earlier .sched-count-pill,
+#main #view-appointments .sched-group.is-cancelled .sched-count-pill {
+    background: var(--ct-line-soft);
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .sched-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+}
+
+/* 4) Event card ------------------------------------------------------------ */
+#main #view-appointments .sched-card {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    column-gap: 16px;
+    row-gap: 14px;
+    padding: 18px;
+    background: var(--ct-surface);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+    transition: border-color .15s;
+}
+
+#main #view-appointments .sched-card:hover {
+    border-color: var(--ct-tint-line);
+}
+
+/* Date block */
+#main #view-appointments .sched-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: start;
+    padding: 9px 0 8px;
+    border: 1px solid var(--ct-tint-line);
+    border-radius: 12px;
+    background: var(--ct-tint);
+    line-height: 1;
+}
+
+#main #view-appointments .sched-date .m {
+    font-size: .66rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ct-accent);
+}
+
+#main #view-appointments .sched-date .d {
+    margin: 5px 0 4px;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-date .w {
+    font-size: .68rem;
+    font-weight: 500;
+    color: var(--ct-muted);
+}
+
+/* Today: the date block turns solid so it stands out in the list */
+#main #view-appointments .sched-card.is-today {
+    border-color: var(--ct-tint-line);
+}
+
+#main #view-appointments .sched-card.is-today .sched-date {
+    background: var(--ct-btn);
+    border-color: var(--ct-btn);
+}
+
+#main #view-appointments .sched-card.is-today .sched-date .m,
+#main #view-appointments .sched-card.is-today .sched-date .d,
+#main #view-appointments .sched-card.is-today .sched-date .w {
+    color: #fff;
+}
+
+#main #view-appointments .sched-card.is-today .sched-date .w {
+    opacity: .8;
+}
+
+/* Earlier / cancelled: quieter */
+#main #view-appointments .sched-card.is-earlier .sched-date,
+#main #view-appointments .sched-card.is-cancelled .sched-date {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-line);
+}
+
+#main #view-appointments .sched-card.is-earlier .sched-date .m,
+#main #view-appointments .sched-card.is-cancelled .sched-date .m {
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .sched-card.is-earlier .sched-date .d,
+#main #view-appointments .sched-card.is-cancelled .sched-date .d {
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .sched-card.is-cancelled .sched-top h3 {
+    color: var(--ct-muted);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+/* Body */
+#main #view-appointments .sched-main {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+#main #view-appointments .sched-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#main #view-appointments .sched-top h3 {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -.01em;
+    color: var(--ct-text);
+    overflow-wrap: anywhere;
+}
+
+#main #view-appointments .sched-top .badge {
+    flex: none;
+    margin-top: 1px;
+}
+
+/* Status badges: scoped colors so the state reads at a glance */
+#main #view-appointments .badge {
+    border: 1px solid var(--ct-line);
+    background: transparent;
+    color: var(--ct-muted);
+    font-size: .7rem;
+    font-weight: 600;
+    padding: 2px 10px;
+    text-decoration: none;
+}
+
+#main #view-appointments .badge-pending {
+    background: var(--ct-tint);
+    border-color: var(--ct-tint-line);
+    color: var(--ct-accent);
+}
+
+#main #view-appointments .badge-completed {
+    background: var(--ct-surface-2);
+}
+
+#main #view-appointments .badge-cancelled {
+    background: var(--ct-danger-tint);
+    border-color: transparent;
+    color: var(--ct-danger);
+}
+
+/* When / where */
+#main #view-appointments .sched-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#main #view-appointments .sched-meta li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: .875rem;
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-meta li::before {
+    display: none;
+}
+
+#main #view-appointments .sched-meta .ic {
+    width: 16px;
+    height: 16px;
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .sched-meta li>span,
+#main #view-appointments .sched-meta li>a {
+    min-width: 0;
+}
+
+#main #view-appointments .sched-meta li>a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ct-accent);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+#main #view-appointments .sched-meta li>a:hover {
+    text-decoration: underline;
+}
+
+#main #view-appointments .sched-dim {
+    color: var(--ct-muted);
+}
+
+/* Invitees */
+#main #view-appointments .sched-people {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    font-size: .82rem;
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .sched-people-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#main #view-appointments .avatar-stack {
+    display: inline-flex;
+    flex: none;
+}
+
+#main #view-appointments .avatar {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--ct-surface);
+    box-sizing: border-box;
+    white-space: nowrap;
+    background: var(--ct-tint);
+    color: var(--ct-accent);
+    font-size: .6rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+}
+
+#main #view-appointments .avatar-stack .avatar+.avatar {
+    margin-left: -6px;
+}
+
+#main #view-appointments .avatar.more {
+    background: var(--ct-surface-2);
+    color: var(--ct-muted);
+    box-shadow: inset 0 0 0 1px var(--ct-line);
+}
+
+/* Notes: clamp to two lines */
+#main #view-appointments .sched-notes {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--ct-line);
+    font-size: .84rem;
+    line-height: 1.5;
+    color: var(--ct-muted);
+}
+
+/* Actions: primary on the left, quiet text buttons on the right */
+#main #view-appointments .sched-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--ct-line-soft);
+}
+
+#main #view-appointments .sched-actions .btn {
+    padding: 6px 14px;
+    font-size: .8rem;
+}
+
+#main #view-appointments .sched-actions-more {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-left: auto;
+}
+
+#main #view-appointments .sched-btn {
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ct-muted);
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+#main #view-appointments .sched-btn:hover {
+    background: var(--ct-surface-2);
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-btn.is-danger:hover {
+    background: var(--ct-danger-tint);
+    color: var(--ct-danger);
+}
+
+#main #view-appointments .sched-btn:focus-visible {
+    outline: 2px solid var(--ct-accent-2);
+    outline-offset: 1px;
+}
+
+/* 5) Empty state ----------------------------------------------------------- */
+#main #view-appointments .sched-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 28px;
+    padding: 48px 24px;
+    border: 1px dashed var(--ct-line);
+    border-radius: var(--ct-r);
+    text-align: center;
+    color: var(--ct-muted);
+    font-size: .875rem;
+}
+
+#main #view-appointments .sched-empty .ic {
+    width: 30px;
+    height: 30px;
+    margin-bottom: 6px;
+    color: var(--ct-accent);
+}
+
+#main #view-appointments .sched-empty strong {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+/* 6) Form panel ------------------------------------------------------------ */
+#main #view-appointments .sched-form {
+    margin-bottom: 24px;
+}
+
+#main #view-appointments .sched-form .grid-2 {
+    gap: 18px 20px;
+}
+
+#main #view-appointments .sched-form .field>label,
+#main #view-appointments .sched-form .field>.lbl {
+    display: block;
+    margin-bottom: 6px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-optional {
+    font-weight: 400;
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .sched-form textarea {
+    min-height: 84px;
+}
+
+#main #view-appointments .sched-form .actions {
+    padding-top: 18px;
+    border-top: 1px solid var(--ct-line-soft);
+}
+
+/* Attendee picker
+   responsive.css still has a legacy multi-column rule for #appt-members (from the
+   old checkbox list); it would split the org groups below, so reset it here. */
+#main #view-appointments #appt-members {
+    columns: auto;
+    column-gap: normal;
+}
+
+#main #view-appointments .sched-form fieldset {
+    padding: 14px 16px 16px;
+    min-width: 0;
+}
+
+#main #view-appointments .sched-form legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+#main #view-appointments .sched-org+.sched-org {
+    margin-top: 16px;
+}
+
+#main #view-appointments .sched-org-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#main #view-appointments .sched-org-head h4 {
+    margin: 0;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--ct-muted);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+#main #view-appointments .sched-link-btn {
+    padding: 2px 4px;
+    border: 0;
+    background: none;
+    color: var(--ct-accent);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#main #view-appointments .sched-link-btn:hover {
+    text-decoration: underline;
+}
+
+#main #view-appointments .sched-chips {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+#main #view-appointments .att-chip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r-sm);
+    background: var(--ct-surface);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+}
+
+#main #view-appointments .att-chip:hover {
+    border-color: var(--ct-tint-line);
+}
+
+#main #view-appointments .att-chip input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#main #view-appointments .att-chip .avatar {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    font-size: .68rem;
+}
+
+#main #view-appointments .att-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+}
+
+#main #view-appointments .att-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .84rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+#main #view-appointments .att-role {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .74rem;
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .att-chip:has(input:checked) {
+    border-color: var(--ct-accent-2);
+    background: var(--ct-tint);
+}
+
+#main #view-appointments .att-chip:has(input:checked) .avatar {
+    background: var(--ct-btn);
+    color: #fff;
+}
+
+#main #view-appointments .att-chip:has(input:focus-visible) {
+    outline: 2px solid var(--ct-accent-2);
+    outline-offset: 2px;
+}
+
+/* Conflict list */
+#main #view-appointments .sched-conflict-list {
+    margin: 8px 0 0 20px;
+    padding: 0;
+}
+
+/* 7) Responsive ------------------------------------------------------------ */
+@media (max-width: 720px) {
+    #main #view-appointments .sched-toolbar .search {
+        flex-basis: 100%;
+        max-width: none;
+    }
+
+    #main #view-appointments .sched-tabs {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    #main #view-appointments .sched-tab {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    #main #view-appointments .sched-tab {
+        gap: 4px;
+        padding: 6px 6px;
+        font-size: .78rem;
+    }
+
+    /* Drop the pill background so all four tabs fit on a phone */
+    #main #view-appointments .sched-tab-count,
+    #main #view-appointments .sched-tab.is-active .sched-tab-count {
+        min-width: 0;
+        padding: 0;
+        background: none;
+        font-size: .74rem;
+    }
+
+    #main #view-appointments .sched-tab.is-active .sched-tab-count {
+        color: var(--ct-accent);
+    }
+
+    #main #view-appointments .sched-card {
+        grid-template-columns: 52px minmax(0, 1fr);
+        column-gap: 12px;
+        padding: 14px;
+    }
+
+    #main #view-appointments .sched-date .d {
+        font-size: 1.3rem;
+    }
+
+    #main #view-appointments .sched-top {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    #main #view-appointments .sched-actions .btn {
+        flex: 1;
+    }
+
+    #main #view-appointments .sched-actions-more {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    #main #view-appointments .sched-chips {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    #main #view-appointments .sched-card,
+    #main #view-appointments .att-chip,
+    #main #view-appointments .sched-tab,
+    #main #view-appointments .sched-btn {
+        transition: none;
+    }
+}
+
+@media (max-width: 380px) {
+    #main #view-appointments .sched-tab {
+        padding: 6px 3px;
+        font-size: .74rem;
+    }
+}
+
+
+/* 8) Full-width rows (wide screens) ---------------------------------------
+   Date | details | actions on one line. Below 720px the stacked card layout
+   above takes over. */
+@media (min-width: 721px) {
+    #main #view-appointments .sched-card {
+        grid-template-columns: 62px minmax(0, 1fr) auto;
+        grid-template-rows: auto;
+        align-items: center;
+        column-gap: 20px;
+        padding: 16px 20px;
+    }
+
+    #main #view-appointments .sched-date {
+        align-self: center;
+    }
+
+    #main #view-appointments .sched-main {
+        gap: 8px;
+    }
+
+    #main #view-appointments .sched-top {
+        justify-content: flex-start;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* time and place side by side */
+    #main #view-appointments .sched-meta {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px 22px;
+    }
+
+    #main #view-appointments .sched-meta li>a {
+        max-width: 320px;
+    }
+
+    #main #view-appointments .sched-notes {
+        -webkit-line-clamp: 1;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    /* actions: right-hand column, divided from the details */
+    #main #view-appointments .sched-actions {
+        grid-column: auto;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        gap: 6px;
+        width: 220px;
+        box-sizing: border-box;
+        padding: 0 0 0 20px;
+        border-top: 0;
+        border-left: 1px solid var(--ct-line-soft);
+        align-self: stretch;
+    }
+
+    #main #view-appointments .sched-actions .btn {
+        text-align: center;
+    }
+
+    #main #view-appointments .sched-actions-more {
+        justify-content: center;
+        margin-left: 0;
+    }
+}
+
+/* 9) Layout: list + calendar ---------------------------------------------- */
+#main #view-appointments .sched-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 28px;
+    align-items: start;
+}
+
+#main #view-appointments .sched-col {
+    min-width: 0;
+}
+
+#main #view-appointments .sched-cal {
+    position: sticky;
+    top: 16px;
+    padding: 18px;
+    background: var(--ct-surface);
+    background-image: radial-gradient(90% 130% at 100% 0%, var(--ct-haze) 0%, transparent 58%);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+}
+
+/* Narrower screens: calendar goes on top, list below */
+@media (max-width: 1100px) {
+    #main #view-appointments .sched-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    #main #view-appointments .sched-cal {
+        order: -1;
+        position: static;
+        max-width: 420px;
+    }
+}
+
+/* 10) Calendar ------------------------------------------------------------- */
+#main #view-appointments .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+#main #view-appointments .cal-head h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    color: var(--ct-text);
+}
+
+#main #view-appointments .cal-nav {
+    display: flex;
+    gap: 4px;
+}
+
+#main #view-appointments .cal-btn {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--ct-line);
+    border-radius: 8px;
+    background: var(--ct-surface);
+    color: var(--ct-text);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+#main #view-appointments .cal-btn.cal-today {
+    font-size: .76rem;
+    font-weight: 600;
+}
+
+#main #view-appointments .cal-btn:hover {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-tint-line);
+}
+
+#main #view-appointments .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+#main #view-appointments .cal-dow {
+    padding: 4px 0 8px;
+    text-align: center;
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .cal-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    aspect-ratio: 1 / 1;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ct-text);
+    font: inherit;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+
+#main #view-appointments .cal-day .n {
+    font-size: .84rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+#main #view-appointments .cal-day .dots {
+    display: flex;
+    gap: 3px;
+    height: 5px;
+}
+
+#main #view-appointments .cal-day:hover {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-line);
+}
+
+#main #view-appointments .cal-day.is-out {
+    color: var(--ct-muted);
+    opacity: .5;
+}
+
+#main #view-appointments .cal-day.has-events .n {
+    font-weight: 700;
+}
+
+#main #view-appointments .cal-day.is-today {
+    border-color: var(--ct-accent-2);
+    color: var(--ct-accent);
+    font-weight: 700;
+}
+
+#main #view-appointments .cal-day.is-selected {
+    background: var(--ct-btn);
+    border-color: var(--ct-btn);
+    color: #fff;
+    opacity: 1;
+}
+
+#main #view-appointments .cal-day:focus-visible,
+#main #view-appointments .cal-btn:focus-visible {
+    outline: 2px solid var(--ct-accent-2);
+    outline-offset: 1px;
+}
+
+/* Status dots (also used in the legend) */
+#main #view-appointments .dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--ct-accent-2);
+}
+
+#main #view-appointments .dot-completed {
+    background: var(--ct-muted);
+}
+
+#main #view-appointments .dot-cancelled {
+    background: var(--ct-danger);
+}
+
+#main #view-appointments .cal-day.is-selected .dot {
+    background: #fff;
+}
+
+#main #view-appointments .cal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--ct-line-soft);
+    font-size: .74rem;
+    color: var(--ct-muted);
+}
+
+#main #view-appointments .cal-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#main #view-appointments .cal-summary {
+    margin: 10px 0 0;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+/* Picked-day chip above the list */
+#main #view-appointments .sched-date-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 10px 14px;
+    border: 1px solid var(--ct-tint-line);
+    border-radius: var(--ct-r-sm);
+    background: var(--ct-tint);
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--ct-accent);
+}
+
+#main #view-appointments .sched-empty .btn {
+    margin-top: 10px;
+}
+
+/* Row layout is tighter now that the list shares the width with the calendar */
+@media (min-width: 721px) and (max-width: 1500px) {
+    #main #view-appointments .sched-actions {
+        width: 196px;
+    }
+}
+
+@media (max-width: 480px) {
+    #main #view-appointments .sched-cal {
+        max-width: none;
+        padding: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    #main #view-appointments .cal-day {
+        aspect-ratio: 1 / .8;
+    }
+}
+
+/* 11) Actions: one primary button + overflow menu -------------------------- */
+@media (min-width: 721px) {
+    #main #view-appointments .sched-actions {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        width: auto;
+        min-width: 0;
+        padding: 0;
+        border-left: 0;
+        align-self: center;
+    }
+
+    #main #view-appointments .sched-actions .btn {
+        padding: 8px 18px;
+    }
+}
+
+#main #view-appointments .sched-menu {
+    position: relative;
+    flex: none;
+}
+
+#main #view-appointments .sched-kebab {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid var(--ct-line);
+    border-radius: 9px;
+    background: var(--ct-surface);
+    color: var(--ct-muted);
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+}
+
+#main #view-appointments .sched-kebab .ic {
+    width: 18px;
+    height: 18px;
+}
+
+#main #view-appointments .sched-kebab:hover,
+#main #view-appointments .sched-kebab[aria-expanded="true"] {
+    background: var(--ct-surface-2);
+    color: var(--ct-text);
+    border-color: var(--ct-tint-line);
+}
+
+#main #view-appointments .sched-kebab:focus-visible,
+#main #view-appointments .sched-menu-item:focus-visible {
+    outline: 2px solid var(--ct-accent-2);
+    outline-offset: 1px;
+}
+
+#main #view-appointments .sched-menu-list {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 30;
+    min-width: 168px;
+    padding: 6px;
+    background: var(--ct-surface);
+    border: 1px solid var(--ct-line);
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(6, 6, 6, .14);
+}
+
+#main #view-appointments .sched-menu-list[hidden] {
+    display: none;
+}
+
+#main #view-appointments .sched-menu-item {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ct-text);
+    font: inherit;
+    font-size: .84rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+#main #view-appointments .sched-menu-item:hover {
+    background: var(--ct-surface-2);
+}
+
+#main #view-appointments .sched-menu-item.is-danger {
+    color: var(--ct-danger);
+}
+
+#main #view-appointments .sched-menu-item.is-danger:hover {
+    background: var(--ct-danger-tint);
+}
+
+#main #view-appointments .sched-menu-sep {
+    height: 1px;
+    margin: 4px 2px;
+    background: var(--ct-line-soft);
+}
+
+:root[data-theme="dark"] #main #view-appointments .sched-menu-list {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .55);
+}
+
+@media (max-width: 480px) {
+    #main #view-appointments .sched-actions {
+        flex-wrap: nowrap;
+    }
+
+    #main #view-appointments .sched-actions .btn {
+        flex: 1;
+    }
+}
