@@ -86,7 +86,9 @@ Cohere.Validators = (function () {
     }
 
     // Validates task form values
-    function validateTask(values) {
+    // editingId is optional: when provided, an unchanged past deadline is allowed
+    // (so an already-overdue task can still be edited/completed)
+    function validateTask(values, editingId) {
         const errors = {};
         const title = (values.title || "").trim();
         const description = (values.description || "").trim();
@@ -120,11 +122,23 @@ Cohere.Validators = (function () {
             errors["task-priority"] = "Select a priority.";
         }
 
-        // Deadline: required, valid ISO date
+        // Deadline: required, valid ISO date, and not in the past
         if (!deadline) {
             errors["task-deadline"] = "Deadline is required.";
         } else if (!Cohere.Utils.isValidISODate(deadline)) {
             errors["task-deadline"] = "Enter a valid deadline.";
+        } else if (deadline < Cohere.Utils.todayISO()) {
+            // On edit, allow keeping an unchanged past deadline (e.g. an overdue task)
+            let unchangedPastDeadline = false;
+            if (editingId) {
+                const existing = Cohere.Store.getTask(editingId);
+                if (existing && existing.deadline === deadline) {
+                    unchangedPastDeadline = true;
+                }
+            }
+            if (!unchangedPastDeadline) {
+                errors["task-deadline"] = "Deadline cannot be in the past.";
+            }
         }
 
         // Status: must be one of the config values
