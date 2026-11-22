@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="css/views.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/content.css">
 </head>
 
 <body>
@@ -95,13 +96,13 @@
 
     <!-- LOGIN (wireframe: Log In page) -->
     <div id="login-screen">
-        <button type="button" class="icon-btn theme-toggle js-theme login-theme" aria-label="Switch to dark mode"
+        <aside class="gradient-card">
+            <button type="button" class="icon-btn theme-toggle js-theme login-theme" aria-label="Switch to dark mode"
             title="Toggle dark mode"><svg class="ic i-moon" aria-hidden="true">
                 <use href="#i-moon" />
             </svg><svg class="ic i-sun" aria-hidden="true">
                 <use href="#i-sun" />
             </svg></button>
-        <aside class="gradient-card">
             <img class="logo logo-word" src="assets/Cohere.png" alt="Cohere">
             <div class="gc-copy">
                 <p class="eyebrow">Student organization management</p>
@@ -214,25 +215,26 @@
 
                 <main id="main">
                     <section class="view" id="view-dashboard" hidden>
-                        <div id="stat-cards"></div>
                         <div class="dash-grid">
-                            <section class="card g-tasks">
+                            <section class="g-tasks">
                                 <h2 class="card-title">Task Delegation</h2>
-                                <div id="dash-task-status"></div>
-                                <div id="dash-due-soon"></div>
-                                <div id="dash-my-tasks" hidden></div>
+                                <div class="card">
+                                    <div id="dash-task-status"></div>
+                                    <div id="dash-due-soon"></div>
+                                    <div id="dash-my-tasks" hidden></div>
+                                </div>
                             </section>
-                            <section class="card g-perf">
+                            <section class="g-perf">
                                 <h2 class="card-title">Performance</h2>
-                                <div id="dash-top-officers"></div>
+                                <div class="card">
+                                    <div id="dash-top-officers"></div>
+                                </div>
                             </section>
-                            <section class="card g-sched">
+                            <section class="g-sched">
                                 <h2 class="card-title">Schedule</h2>
-                                <div id="dash-upcoming"></div>
-                            </section>
-                            <section class="card g-act">
-                                <h2 class="card-title">Recent activity</h2>
-                                <div id="dash-recent-activity"></div>
+                                <div class="card">
+                                    <div id="dash-upcoming"></div>
+                                </div>
                             </section>
                         </div>
                     </section>

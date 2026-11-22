@@ -725,7 +725,8 @@ td:last-child .btn+.btn {
 
 .badge {
     display: inline-block;
-    padding: 3px 11px;
+    border: 1.5px solid var(--line);
+    padding: 1px 10px;
     border-radius: 99px;
     font-size: .72rem;
     font-weight: 700;
@@ -733,27 +734,19 @@ td:last-child .btn+.btn {
 
 .badge-high,
 .badge-absent {
-    background: #fdd9d5;
-    color: #8e1f17;
+    background: var(--btn);
+    color: #fff;
 }
 
-.badge-medium {
-    background: #fdeccb;
-    color: #85520a;
+.badge-medium,
+.badge-progress {
+    background: #c9d6f5;
+    color: #0417a4;
 }
 
 .badge-low,
 .badge-present,
-.badge-completed {
-    background: #d3f1e2;
-    color: #0a6642;
-}
-
-.badge-progress {
-    background: #dbe2ff;
-    color: var(--cobalt);
-}
-
+.badge-completed,
 .badge-pending,
 .badge-cancelled,
 .badge-excused,
@@ -774,7 +767,7 @@ td:last-child .btn+.btn {
 }
 
 .bar-fill {
-    background: linear-gradient(90deg, var(--cobalt), var(--cobalt-2));
+    background: var(--btn);
     height: 100%;
     border-radius: 99px;
     transition: width .4s;

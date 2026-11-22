@@ -2,48 +2,16 @@
    Overview
    ========================================================================== */
 
-/* Overview */
-#stat-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 14px;
-}
-
-#stat-cards .card {
-    padding: 18px 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-#stat-cards .card h3 {
-    margin: 0 0 6px;
-}
-
-#stat-cards .value {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -.03em;
-}
-
-#stat-cards .card:first-child {
-    color: #fff;
-    background: radial-gradient(130% 120% at 0% 0%, var(--cobalt-2), var(--cobalt) 55%, #020a52);
-}
-
-#stat-cards .card:first-child h3 {
-    color: rgba(255, 255, 255, .75);
-}
-
-#stat-cards .card:nth-child(4) .value {
-    color: var(--color-danger);
-}
-
+/* ==========================================================================
+   Overview (wireframe layout: titles sit above the blocks)
+   ========================================================================== */
 .dash-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-    grid-template-areas: "tasks perf" "tasks sched" "act act";
-    gap: 18px;
-    align-items: start;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    grid-template-areas: "tasks perf" "tasks sched";
+    gap: 26px 32px;
+    align-items: stretch;
 }
 
 .g-tasks {
@@ -58,24 +26,87 @@
     grid-area: sched;
 }
 
-.g-act {
-    grid-area: act;
+.dash-grid>section {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
-.card-title {
-    margin-bottom: 8px;
+.dash-grid .card-title {
+    font-size: 1.5rem;
+    margin: 0 0 12px 2px;
 }
 
+.dash-grid .card {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    padding: 24px 26px;
+    border-radius: var(--radius-xl);
+    box-shadow: none;
+    border: 1.5px solid var(--line);
+}
+
+.dash-grid .card>* {
+    position: relative;
+    z-index: 1;
+}
+
+/* solid colours only: white base, cobalt highlight, pale-blue secondary */
+.g-tasks .card {
+    background: var(--white);
+}
+
+.g-perf .card {
+    --text: #fff;
+    --line-soft: rgba(255, 255, 255, .22);
+    --color-muted: rgba(255, 255, 255, .75);
+    --track: rgba(255, 255, 255, .22);
+    --row-line: rgba(255, 255, 255, .7);
+    color: #fff;
+    background: var(--btn);
+}
+
+.g-sched .card {
+    --text: #060606;
+    --line-soft: rgba(6, 6, 6, .14);
+    --color-muted: #3d4564;
+    --row-line: #060606;
+    color: #060606;
+    background: #c9d6f5;
+}
+
+.dash-grid ul {
+    display: grid;
+    gap: 8px;
+}
+
+/* thin outline language: every element gets the same 1.5px line */
 .dash-grid li {
-    border-bottom-color: var(--line-soft) !important;
+    padding: 10px 14px !important;
+    border: 1.5px solid var(--row-line, var(--line)) !important;
+    border-radius: 14px;
 }
 
-.dash-grid li:last-child {
-    border-bottom: 0 !important;
+.dash-grid .card h3 {
+    margin: 0 0 12px;
 }
 
-.card .card-title~div>h3:first-child {
-    margin-top: 12px;
+.dash-grid .card>div+div {
+    margin-top: 22px;
+}
+
+.dash-grid .bar {
+    height: 12px;
+    border: 1.5px solid var(--line);
+    background: transparent;
+}
+
+@media (max-width: 1100px) {
+    .dash-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas: "tasks" "perf" "sched";
+    }
 }
 
 /* ==========================================================================

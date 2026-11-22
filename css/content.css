@@ -1,0 +1,593 @@
+/* ==========================================================================
+   Content area — one visual language for every tab
+   --------------------------------------------------------------------------
+   Scope: #main (all tab views), plus the modal and toasts that appear over
+   them. The sidebar (#sidebar) and the page header (#app-header) are NOT
+   touched: nothing in this file targets them, and the tokens below only exist
+   inside #main, so they cannot leak upward.
+
+   Rules of the system
+   - Palette sampled from the reference: ink, cobalt, haze blue, paper.
+   - Surfaces are flat white with a 1px cool-grey outline. No shadows.
+   - Gradient is used sparingly: a faint corner haze on large panels, the
+     progress-bar fill, and the Organization orbs.
+   - Two radii: 16px for containers, 10px for controls. Pills for badges.
+   - Loaded last, so it wins over base/components/views/theme.
+   ========================================================================== */
+
+/* 1) Tokens ---------------------------------------------------------------- */
+#main,
+#modal-overlay,
+#toast-container {
+    --ct-surface: #ffffff;
+    --ct-surface-2: #f6f7fa;
+    --ct-line: #d9dce5;
+    --ct-line-soft: #eceef3;
+    --ct-ink: #060606;
+    --ct-text: #060606;
+    --ct-muted: #5f6472;
+    --ct-accent: #0417a4;
+    --ct-accent-2: #1634e6;
+    --ct-btn: #0417a4;
+    --ct-btn-hover: #1634e6;
+    --ct-tint: #eaf0fb;
+    --ct-tint-line: #b9c7ef;
+    --ct-haze: rgba(22, 52, 230, .07);
+    --ct-ring: rgba(22, 52, 230, .16);
+    --ct-track: #e6e8ef;
+    --ct-danger: #c9302a;
+    --ct-danger-tint: rgba(201, 48, 42, .07);
+    --ct-r: 16px;
+    --ct-r-sm: 10px;
+
+    /* Re-point the legacy tokens used by the older rules and by the JS views.
+       Because they are set on #main they never reach the sidebar or header. */
+    --text: var(--ct-text);
+    --line: var(--ct-line);
+    --line-soft: var(--ct-line-soft);
+    --white: var(--ct-surface);
+    --zebra: transparent;
+    --track: var(--ct-track);
+    --hover: rgba(6, 6, 6, .05);
+    --haze-soft: var(--ct-tint);
+    --chip: transparent;
+    --chip-text: var(--ct-muted);
+    --accent-text: var(--ct-accent);
+    --btn: var(--ct-btn);
+    --btn-hover: var(--ct-btn-hover);
+    --color-muted: var(--ct-muted);
+    --color-border: var(--ct-line);
+    --color-danger: var(--ct-danger);
+    --shadow: none;
+    --offset: transparent;
+}
+
+:root[data-theme="dark"] #main,
+:root[data-theme="dark"] #modal-overlay,
+:root[data-theme="dark"] #toast-container {
+    --ct-surface: #181a20;
+    --ct-surface-2: #1e2028;
+    --ct-line: #32354a;
+    --ct-line-soft: #252835;
+    --ct-ink: #eceef4;
+    --ct-text: #eceef4;
+    --ct-muted: #9a9eb0;
+    --ct-accent: #8ea2ff;
+    --ct-accent-2: #5b74ff;
+    --ct-btn: #2a45ee;
+    --ct-btn-hover: #4862ff;
+    --ct-tint: rgba(90, 120, 255, .13);
+    --ct-tint-line: rgba(110, 135, 255, .38);
+    --ct-haze: rgba(42, 69, 238, .2);
+    --ct-ring: rgba(110, 135, 255, .28);
+    --ct-track: #2b2e3b;
+    --ct-danger: #ff7a70;
+    --ct-danger-tint: rgba(255, 122, 112, .1);
+    --hover: rgba(255, 255, 255, .06);
+}
+
+/* 2) Headings -------------------------------------------------------------- */
+#main .section-head h2,
+#main .card-title,
+#main .panel-head h2,
+#main .dash-grid .card-title,
+#modal-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    margin: 0;
+}
+
+#main .dash-grid .card-title {
+    margin: 0 0 12px;
+}
+
+#main .split-main .card-title {
+    margin-bottom: 12px;
+}
+
+/* Small labels inside cards: sentence case, muted, no all-caps */
+#main .card h3 {
+    font-size: .82rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ct-muted);
+    margin: 0 0 10px;
+}
+
+#main #attendance-rates h3,
+#main #attendance-summary h3,
+#main .appt-list .card h3,
+#main #perf-detail h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    color: var(--ct-text);
+    margin: 0;
+}
+
+/* 3) Surfaces: one outline, one radius, no shadow -------------------------- */
+#main .card,
+#main .form-panel,
+#main .table-wrap,
+#main .org-list li,
+#main .feed li,
+#main .appt-list .card,
+#main #attendance-summary:not(:empty),
+#main #attendance-rates:not(:empty),
+#main #perf-detail:not(:empty) {
+    background-color: var(--ct-surface);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+    box-shadow: none;
+}
+
+#main .card {
+    padding: 22px;
+}
+
+/* The one gradient on surfaces: a faint haze in the top-right corner of the
+   large panels (Overview cards, Settings, forms, performance detail). */
+#main .dash-grid .card,
+#main #view-settings .card,
+#main .form-panel,
+#main #perf-detail:not(:empty) {
+    background-image: radial-gradient(90% 130% at 100% 0%, var(--ct-haze) 0%, transparent 58%);
+}
+
+#main .form-panel {
+    padding: 24px;
+}
+
+#main .panel-head {
+    margin-bottom: 18px;
+}
+
+#main #perf-detail:not(:empty) {
+    padding: 24px;
+    max-width: 720px;
+}
+
+#main #attendance-summary:not(:empty),
+#main #attendance-rates:not(:empty) {
+    padding: 16px 18px;
+}
+
+#main .feed li,
+#main .org-list li {
+    padding: 14px 18px !important;
+    border-bottom-width: 1px !important;
+}
+
+#main .feed li {
+    border-left: 1px solid var(--ct-line);
+    border-radius: 12px;
+}
+
+/* 4) Overview: all three cards use the same surface ------------------------ */
+#main .dash-grid {
+    gap: 24px 28px;
+}
+
+#main .dash-grid .card,
+#main .g-tasks .card,
+#main .g-perf .card,
+#main .g-sched .card {
+    --text: var(--ct-text);
+    --line-soft: var(--ct-line-soft);
+    --color-muted: var(--ct-muted);
+    --track: var(--ct-track);
+    --row-line: var(--ct-line);
+    color: var(--ct-text);
+    background-color: var(--ct-surface);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+    padding: 22px;
+}
+
+#main .dash-grid li {
+    padding: 10px 14px !important;
+    border: 1px solid var(--ct-line) !important;
+    border-radius: 12px;
+    background: transparent;
+}
+
+#main .dash-grid .card h3 {
+    margin: 0 0 10px;
+}
+
+/* 5) Progress bars: thin track, gradient fill ------------------------------ */
+#main .bar,
+#main .dash-grid .bar,
+#main #perf-detail .bar {
+    height: 6px;
+    border: 0;
+    border-radius: 99px;
+    background: var(--ct-track);
+    overflow: hidden;
+}
+
+#main .bar-fill {
+    background: linear-gradient(90deg, var(--ct-accent), var(--ct-accent-2));
+    border-radius: 99px;
+}
+
+:root[data-theme="dark"] #main .bar-fill {
+    background: linear-gradient(90deg, var(--ct-btn), var(--ct-accent));
+}
+
+/* 6) Organization: soft orb from the reference ----------------------------- */
+#main .org-list li {
+    grid-template-columns: 44px 1fr auto;
+    column-gap: 16px;
+}
+
+#main .org-list li::before {
+    width: 44px;
+    height: 44px;
+    box-shadow: none;
+    background: radial-gradient(circle at 50% 50%,
+            #060b3a 0%,
+            #0417a4 30%,
+            #1634e6 50%,
+            rgba(175, 200, 220, .55) 74%,
+            rgba(175, 200, 220, 0) 100%);
+}
+
+#main .org-list li>div:nth-child(1) {
+    font-size: 1rem;
+    font-weight: 600 !important;
+}
+
+#main .org-list li>div:nth-child(2) {
+    color: var(--ct-muted);
+}
+
+/* 7) Schedule cards -------------------------------------------------------- */
+#main .appt-list .card {
+    padding: 20px;
+    transition: border-color .15s;
+}
+
+#main .appt-list .card:hover {
+    box-shadow: none;
+    border-color: var(--ct-tint-line);
+}
+
+#main .appt-list a {
+    font-weight: 500;
+}
+
+#main .appt-list .btn {
+    padding: 6px 14px;
+    font-size: .8rem;
+}
+
+/* 8) Tables ---------------------------------------------------------------- */
+#main .table-wrap {
+    overflow-x: auto;
+}
+
+#main th {
+    background: var(--ct-surface-2);
+    color: var(--ct-muted);
+    font-size: .78rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--ct-line);
+}
+
+#main td {
+    border-bottom: 1px solid var(--ct-line-soft);
+}
+
+#main tbody tr:nth-child(even) {
+    background: transparent;
+}
+
+#main tbody tr:hover {
+    background: var(--ct-surface-2);
+}
+
+#main .row-overdue {
+    box-shadow: inset 2px 0 0 var(--ct-danger);
+}
+
+#main #attendance-rates .table-wrap {
+    border: 0;
+    border-radius: 0;
+}
+
+#main #attendance-rates th {
+    background: transparent;
+}
+
+/* 9) Buttons --------------------------------------------------------------- */
+#main .btn {
+    padding: 9px 16px;
+    font-size: .85rem;
+    font-weight: 600;
+    border: 1px solid var(--ct-btn);
+    border-radius: var(--ct-r-sm);
+    background: var(--ct-btn);
+    color: #fff;
+    box-shadow: none;
+    transition: background .15s, border-color .15s, color .15s;
+}
+
+#main .btn:hover {
+    background: var(--ct-btn-hover);
+    border-color: var(--ct-btn-hover);
+    box-shadow: none;
+}
+
+#main .btn-secondary {
+    background: transparent;
+    color: var(--ct-text);
+    border-color: var(--ct-ink);
+}
+
+#main .btn-secondary:hover {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-ink);
+    color: var(--ct-text);
+}
+
+#main .btn-danger,
+#main .btn-danger-o {
+    background: transparent;
+    color: var(--ct-danger);
+    border-color: var(--ct-danger);
+}
+
+#main .btn-danger:hover,
+#main .btn-danger-o:hover {
+    background: var(--ct-danger-tint);
+    border-color: var(--ct-danger);
+    color: var(--ct-danger);
+}
+
+#main .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ct-text);
+}
+
+#main .btn-ghost:hover {
+    background: var(--ct-surface-2);
+    border-color: transparent;
+}
+
+#main td .btn,
+#main .org-list .btn {
+    padding: 5px 12px;
+    font-size: .78rem;
+    border-radius: 8px;
+}
+
+#main #attendance-table-body .btn {
+    border-radius: 99px;
+}
+
+#main .icon-btn:hover {
+    background: var(--ct-surface-2);
+}
+
+/* 10) Form controls -------------------------------------------------------- */
+#main label,
+#main .lbl {
+    font-weight: 500;
+    font-size: .84rem;
+}
+
+#main input,
+#main select,
+#main textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r-sm);
+    background-color: var(--ct-surface);
+    color: var(--ct-text);
+    font-size: .88rem;
+}
+
+#main .search input {
+    padding-left: 40px;
+}
+
+#main input[type=radio],
+#main input[type=checkbox] {
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+#main input::placeholder,
+#main textarea::placeholder {
+    color: var(--ct-muted);
+    opacity: .7;
+}
+
+#main input:focus,
+#main select:focus,
+#main textarea:focus {
+    border-color: var(--ct-accent-2);
+    box-shadow: 0 0 0 3px var(--ct-ring);
+}
+
+#main input[type=file] {
+    border: 1px dashed var(--ct-line);
+    background: transparent;
+}
+
+#main .is-invalid {
+    border-color: var(--ct-danger) !important;
+    box-shadow: 0 0 0 3px var(--ct-danger-tint) !important;
+}
+
+#main .field-error {
+    color: var(--ct-danger);
+}
+
+#main fieldset {
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r-sm);
+}
+
+#main legend {
+    font-weight: 500;
+    color: var(--ct-muted);
+}
+
+#main .seg span {
+    border: 1px solid var(--ct-line);
+    background: var(--ct-surface);
+    font-weight: 500;
+    padding: 8px 18px;
+}
+
+#main .seg input:checked+span {
+    background: var(--ct-btn);
+    border-color: var(--ct-btn);
+    color: #fff;
+}
+
+/* 11) Badges --------------------------------------------------------------- */
+#main .badge {
+    padding: 1px 10px;
+    border: 1px solid var(--ct-line);
+    border-radius: 99px;
+    background: transparent;
+    color: var(--ct-muted);
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+#main .badge-high,
+#main .badge-absent {
+    background: var(--ct-btn);
+    border-color: var(--ct-btn);
+    color: #fff;
+}
+
+#main .badge-medium,
+#main .badge-progress {
+    background: var(--ct-tint);
+    border-color: var(--ct-tint-line);
+    color: var(--ct-accent);
+}
+
+/* 12) Notes, conflicts, stepper ------------------------------------------- */
+#main .view-only-note,
+#main #task-completed-wrap {
+    background: var(--ct-tint);
+    border: 1px solid var(--ct-tint-line);
+    border-left-width: 1px;
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--ct-muted);
+}
+
+#main .conflict-box {
+    background: var(--ct-danger-tint);
+    border: 1px solid var(--ct-danger);
+    border-radius: 12px;
+    color: var(--ct-danger);
+}
+
+#main .stepper li::before {
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    border: 1px solid var(--ct-line);
+    background: var(--ct-surface);
+}
+
+#main .stepper li::after {
+    height: 1px;
+    top: 12px;
+    background: var(--ct-line);
+}
+
+#main .stepper li.done::before {
+    background: var(--ct-accent);
+    border-color: var(--ct-accent);
+}
+
+#main .stepper li.on::before {
+    background: var(--ct-btn);
+    border-color: var(--ct-btn);
+    box-shadow: 0 0 0 4px var(--ct-ring);
+}
+
+/* 13) Modal and toasts (shown over any tab) ------------------------------- */
+#modal {
+    background: var(--ct-surface);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+    box-shadow: 0 20px 50px rgba(6, 6, 6, .18);
+    color: var(--ct-text);
+}
+
+#modal .btn {
+    border-radius: var(--ct-r-sm);
+}
+
+.toast {
+    background: var(--ct-surface);
+    color: var(--ct-text);
+    border: 1px solid var(--ct-line);
+    border-left-width: 3px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(6, 6, 6, .12);
+    font-weight: 500;
+}
+
+.toast-success {
+    border-left-color: #0f8f5f;
+}
+
+.toast-error {
+    border-left-color: var(--ct-danger);
+}
+
+.toast-info {
+    border-left-color: var(--ct-accent-2);
+}
+
+/* 14) Small screens -------------------------------------------------------- */
+@media (max-width: 600px) {
+
+    #main .card,
+    #main .dash-grid .card,
+    #main .form-panel,
+    #main #perf-detail:not(:empty) {
+        padding: 18px;
+    }
+}
+
+#modal .btn-secondary {
+    background: transparent;
+    color: var(--ct-text);
+    border: 1px solid var(--ct-ink);
+}

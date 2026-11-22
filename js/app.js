@@ -100,9 +100,15 @@ Cohere.App = (function () {
         const target = document.getElementById("view-" + name);
         if (target) target.hidden = false;
 
-        document.querySelectorAll(".nav-btn").forEach(function (b) { b.classList.remove("active"); });
+        document.querySelectorAll(".nav-btn").forEach(function (b) {
+            b.classList.remove("active");
+            b.removeAttribute("aria-current");
+        });
         const activeBtn = document.querySelector(`.nav-btn[data-view="${name}"]`);
-        if (activeBtn) activeBtn.classList.add("active");
+        if (activeBtn) {
+            activeBtn.classList.add("active");
+            activeBtn.setAttribute("aria-current", "page");
+        }
 
         if (Cohere.Layout) Cohere.Layout.onView(name);
     }

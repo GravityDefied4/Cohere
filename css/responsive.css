@@ -12,7 +12,7 @@
 
     .dash-grid {
         grid-template-columns: 1fr;
-        grid-template-areas: "tasks" "perf" "sched" "act";
+        grid-template-areas: "tasks" "perf" "sched";
     }
 }
 

@@ -82,9 +82,24 @@
     color: #fff;
 }
 
+.nav-btn:active {
+    transform: scale(.96);
+}
+
+.nav-btn:focus-visible {
+    outline: 2px solid var(--cobalt-2);
+    outline-offset: 2px;
+}
+
+/* selected item: standalone filled pill */
 .nav-btn.active {
     background: var(--nav-pill);
     color: var(--nav-ink);
+    cursor: default;
+}
+
+.nav-btn.active .ic {
+    stroke-width: 2.4;
 }
 
 /* short screens: tighten spacing so every item still fits without clipping tooltips */
