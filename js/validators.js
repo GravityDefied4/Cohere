@@ -1,0 +1,92 @@
+window.Cohere = window.Cohere || {};
+Cohere.Validators = (function () {
+    "use strict";
+
+    // Validates organization form values
+    function validateOrg(values, editingId) {
+        const errors = {};
+        const name = (values.name || "").trim();
+        const description = (values.description || "").trim();
+
+        // Name: required, 3-60 chars
+        if (!name || name.length < 3 || name.length > 60) {
+            errors["org-name"] = "Organization name is required (3–60 characters).";
+        }
+
+        // Name: unique (ignore case)
+        if (!errors["org-name"]) {
+            const duplicate = window.Cohere.state.organizations.some(function (o) {
+                return o.id !== editingId && o.name.toLowerCase() === name.toLowerCase();
+            });
+            if (duplicate) {
+                errors["org-name"] = "That organization already exists.";
+            }
+        }
+
+        // Description: optional, up to 200 chars
+        if (description.length > 200) {
+            errors["org-desc"] = "Description is too long (max 200).";
+        }
+
+        return { valid: Object.keys(errors).length === 0, errors: errors };
+    }
+
+    // Validates member form values
+    function validateMember(values, editingId) {
+        const errors = {};
+        const fullName = (values.fullName || "").trim();
+        const studentId = (values.studentId || "").trim();
+        const orgId = values.orgId || "";
+        const position = values.position || "";
+        const yearSection = (values.yearSection || "").trim();
+        const email = (values.email || "").trim();
+
+        // Full name: required, 2-60 chars, letters/spaces/.  ' - only
+        if (!fullName || fullName.length < 2 || fullName.length > 60) {
+            errors["member-fullName"] = "Enter a valid full name.";
+        } else if (!/^[A-Za-z\s.'\-]+$/.test(fullName)) {
+            errors["member-fullName"] = "Enter a valid full name.";
+        }
+
+        // Student ID: required, /^[A-Za-z0-9-]{4,20}$/, unique
+        if (!studentId || !/^[A-Za-z0-9-]{4,20}$/.test(studentId)) {
+            errors["member-studentId"] = "Enter a valid student ID.";
+        } else {
+            const duplicate = window.Cohere.state.members.some(function (m) {
+                return m.id !== editingId && m.studentId === studentId;
+            });
+            if (duplicate) {
+                errors["member-studentId"] = "This student ID is already registered.";
+            }
+        }
+
+        // Organization: required
+        if (!orgId) {
+            errors["member-orgId"] = "Select an organization.";
+        } else {
+            const org = Cohere.Store.getOrg(orgId);
+            if (!org) {
+                errors["member-orgId"] = "Select an organization.";
+            }
+        }
+
+        // Position: required
+        if (!position || !Cohere.Config.POSITIONS.includes(position)) {
+            errors["member-position"] = "Select a position.";
+        }
+
+        // Year/section: optional, up to 20 chars
+        if (yearSection.length > 20) {
+            errors["member-yearSection"] = "Year/section is too long.";
+        }
+
+        // Email: optional, valid format
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors["member-email"] = "Enter a valid email address.";
+        }
+
+        return { valid: Object.keys(errors).length === 0, errors: errors };
+    }
+
+    return { validateOrg, validateMember };
+})();
