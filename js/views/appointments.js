@@ -90,7 +90,7 @@ Cohere.Appointments = (function () {
         if (!membersContainer) return;
         Cohere.Utils.clearEl(membersContainer);
 
-        const members = window.Cohere.state.members;
+        const members = window.Cohere.state.members.filter(function (m) { return Cohere.Permissions.canManageOrgData(m.orgId); });
         if (members.length === 0) {
             membersContainer.appendChild(Cohere.Utils.createEl("p", { textContent: "No officers available. Add members first.", className: "text-muted" }));
             return;
@@ -294,7 +294,7 @@ Cohere.Appointments = (function () {
             }
 
             const actions = Cohere.Utils.createEl("div", { style: "display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;" });
-            const canManage = Cohere.Permissions.can("manageMeetings");
+            const canManage = Cohere.Permissions.canManageMeeting(appt);
 
             if (canManage) {
                 actions.appendChild(Cohere.Utils.createEl("button", { textContent: "Edit", className: "btn btn-secondary", dataset: { action: "edit", id: appt.id } }));

@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/content.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/organization.css">
 </head>
 
 <body>
@@ -122,12 +123,6 @@
     <!-- LOGIN (wireframe: Log In page) -->
     <div id="login-screen">
         <aside class="gradient-card">
-            <button type="button" class="icon-btn theme-toggle js-theme login-theme" aria-label="Switch to dark mode"
-            title="Toggle dark mode"><svg class="ic i-moon" aria-hidden="true">
-                <use href="#i-moon" />
-            </svg><svg class="ic i-sun" aria-hidden="true">
-                <use href="#i-sun" />
-            </svg></button>
             <img class="logo logo-word" src="assets/Cohere.png" alt="Cohere">
             <div class="gc-copy">
                 <p class="eyebrow">Student organization management</p>
@@ -137,11 +132,17 @@
         </aside>
         <main class="login-main">
             <form id="login-form" novalidate>
-                <h1 class="title-bar">Login</h1>
+                <div class="login-head">
+                    <h1 class="title-bar">Login</h1>
+                    <button type="button" class="theme-toggle theme-toggle-labeled js-theme" aria-label="Switch to dark mode"
+                        title="Toggle dark mode"><svg class="ic i-moon" aria-hidden="true"><use href="#i-moon" /></svg><svg
+                            class="ic i-sun" aria-hidden="true"><use href="#i-sun" /></svg><span class="tt-label tt-to-dark">Dark mode</span><span
+                            class="tt-label tt-to-light">Light mode</span></button>
+                </div>
                 <div class="field"><label for="login-id">Email address or Student ID</label>
                     <div class="with-icon"><svg class="ic" aria-hidden="true">
                             <use href="#i-mail" />
-                        </svg><input type="text" id="login-id" placeholder="name@cdd.udu.ph" autocomplete="username">
+                        </svg><input type="text" id="login-id" placeholder="name.123.stud@cdd.edu.ph or 24-1234-123" maxlength="60" autocomplete="username" autocapitalize="none" spellcheck="false">
                     </div>
                 </div>
                 <div class="field"><label for="login-pw">Password</label>
@@ -152,8 +153,8 @@
                 </div>
                 <p id="login-error" class="field-error" hidden></p>
                 <button type="submit" class="btn btn-block btn-dark">Sign in</button>
-                <p class="hint">Demo build: any password works. Use a member’s email or student ID to view as them, or
-                    leave the ID blank for the administrator view.</p>
+                <p class="hint">Sign in with an account from <code>js/accounts-data.js</code>. Your role is fixed to your
+                    account and cannot be changed after signing in.</p>
             </form>
         </main>
     </div>
@@ -183,9 +184,9 @@
                         aria-hidden="true">
                         <use href="#i-chart" />
                     </svg><span class="nav-label">Performance</span></button><button class="nav-btn"
-                    data-view="activity" title="Activity" aria-label="Activity"><svg class="ic" aria-hidden="true">
+                    data-view="activity" data-permission="viewActivity" title="Activity" aria-label="Activity"><svg class="ic" aria-hidden="true">
                         <use href="#i-pulse" />
-                    </svg><span class="nav-label">Activity</span></button><button class="nav-btn" data-view="settings"
+                    </svg><span class="nav-label">Activity</span></button><button class="nav-btn" data-view="settings" data-permission="viewSettings"
                     title="Settings" aria-label="Settings"><svg class="ic" aria-hidden="true">
                         <use href="#i-sliders" />
                     </svg><span class="nav-label">Settings</span></button>
@@ -203,13 +204,8 @@
                     <button id="btn-menu-toggle" class="icon-btn" aria-label="Toggle menu">☰</button>
                     <h1 id="page-title">Overview</h1><span id="role-pill" class="pill">Administrator</span>
                     <div class="header-controls">
-                        <div class="select-pill"><span class="dot" id="viewing-dot"></span><label for="viewing-as"
-                                class="sr-only">Viewing as</label>
-                            <select id="viewing-as">
-                                <option value="admin">Administrator (demo)</option>
-                            </select><svg class="ic chev" aria-hidden="true">
-                                <use href="#i-chev" />
-                            </svg>
+                        <div class="select-pill user-pill" title="Signed in account"><span class="dot" id="viewing-dot"></span><span
+                                id="user-name" class="user-name"></span>
                         </div>
                         <button type="button" id="btn-theme" class="icon-btn theme-toggle js-theme"
                             aria-label="Switch to dark mode" title="Toggle dark mode"><svg class="ic i-moon"
@@ -249,10 +245,25 @@
                     </section>
 
                     <section class="view" id="view-members" hidden>
-                        <div data-permission="manageMembers">
+                        <!-- Organization picker (wireframe: org card with dropdown) -->
+                        <div class="org-picker" id="org-picker">
+                            <button type="button" class="org-picker-btn" id="org-picker-btn" aria-expanded="false"
+                                aria-controls="org-picker-list">
+                                <span class="org-orb" aria-hidden="true"></span>
+                                <span class="org-picker-text"><strong id="org-picker-name">No organization</strong><span
+                                        id="org-picker-desc"></span></span>
+                                <svg class="ic chev" aria-hidden="true">
+                                    <use href="#i-chev" />
+                                </svg>
+                            </button>
+                            <ul class="org-picker-list" id="org-picker-list" hidden></ul>
+                        </div>
+
+                        <!-- Admin only: create organizations and assign presidents -->
+                        <div data-permission="manageOrgs">
                             <div class="section-head">
-                                <h2>Organizations</h2><button type="button" class="btn" data-open="org-panel"
-                                    data-permission="manageMembers"><svg class="ic" aria-hidden="true">
+                                <h2>Organizations</h2><button type="button" class="btn" data-open="org-panel"><svg
+                                        class="ic" aria-hidden="true">
                                         <use href="#i-plus" />
                                     </svg>Add organization</button>
                             </div>
@@ -274,12 +285,33 @@
                                             class="btn btn-secondary" hidden>Cancel</button></div>
                                 </form>
                             </section>
-                            <ul id="org-list" class="org-list"></ul>
+                            <div id="org-detail" class="org-detail"></div>
+                            <section class="form-panel" id="president-panel" hidden>
+                                <div class="panel-head">
+                                    <h2 id="president-title">Assign president</h2><button type="button"
+                                        class="icon-btn panel-close" aria-label="Close form"><svg class="ic"
+                                            aria-hidden="true">
+                                            <use href="#i-x" />
+                                        </svg></button>
+                                </div>
+                                <form id="president-form" class="grid-2" novalidate>
+                                    <div class="field "><label for="pres-fullName">Student name</label><input
+                                            type="text" id="pres-fullName"></div>
+                                    <div class="field "><label for="pres-studentId">ID number</label><input
+                                            type="text" id="pres-studentId"></div>
+                                    <div class="field span-2"><label for="pres-email">University email</label><input
+                                            type="email" id="pres-email"></div>
+                                    <p class="hint span-2">The new president signs in with their ID number. Their first
+                                        password is the same ID number. Any current president becomes a Member.</p>
+                                    <div class="actions span-2"><button type="submit" class="btn">Assign
+                                            President</button></div>
+                                </form>
+                            </section>
                         </div>
-                        <p class="view-only-note" data-permission-note="manageMembers" hidden>You do not have permission
-                            to manage organizations.</p>
+
+                        <!-- Members of the selected organization (wireframe: search + filters + table) -->
                         <div class="section-head">
-                            <h2>Members</h2><button type="button" class="btn" data-open="member-panel"
+                            <h2>Members</h2><button type="button" class="btn" id="btn-add-member" data-open="member-panel"
                                 data-permission="manageMembers"><svg class="ic" aria-hidden="true">
                                     <use href="#i-plus" />
                                 </svg>Add member</button>
@@ -293,28 +325,29 @@
                             </div>
                             <form id="member-form" class="grid-2" novalidate>
                                 <input type="hidden" id="member-id">
+                                <input type="hidden" id="member-orgId">
                                 <div class="field "><label for="member-fullName">Student name</label><input type="text"
                                         id="member-fullName"></div>
                                 <div class="field "><label for="member-studentId">ID number</label><input type="text"
                                         id="member-studentId"></div>
                                 <div class="field span-2"><label for="member-email">University email</label><input
                                         type="email" id="member-email"></div>
-                                <div class="field "><label for="member-orgId">Organization</label><select
-                                        id="member-orgId"></select></div>
-                                <div class="field "><label for="member-position">Role</label><select
-                                        id="member-position"></select></div>
-                                <div class="field span-2"><label for="member-yearSection">Year / Section</label><input
-                                        type="text" id="member-yearSection"></div>
+                                <div class="field "><label for="member-role">Role</label><select
+                                        id="member-role"></select></div>
+                                <div class="field "><label for="member-specificRole">Specific role</label><input
+                                        type="text" id="member-specificRole"
+                                        placeholder="e.g., Secretary, Logistics Committee"></div>
                                 <div class="actions span-2"><button type="submit" id="member-submit" class="btn">Add
                                         Member</button><button type="button" id="member-cancel"
                                         class="btn btn-secondary" hidden>Cancel</button></div>
                             </form>
                         </section>
-                        <p class="view-only-note" data-permission-note="manageMembers" hidden>You do not have permission
-                            to manage members.</p>
+                        <p class="view-only-note" data-permission-note="manageMembers" hidden>Only the organization
+                            president can add or manage members.</p>
                         <div class="toolbar">
-                            <div class="search"><input type="search" id="member-search" placeholder="Search by name">
-                            </div><select id="member-filter-org"></select>
+                            <div class="search"><input type="search" id="member-search" placeholder="Name"></div>
+                            <select id="member-filter-office" aria-label="Office or committee"></select>
+                            <select id="member-filter-status" aria-label="Status"></select>
                         </div>
                         <div class="table-wrap">
                             <table>
@@ -322,8 +355,9 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Student ID</th>
-                                        <th>Organization</th>
-                                        <th>Position</th>
+                                        <th>Role</th>
+                                        <th>Office / Committee</th>
+                                        <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -548,7 +582,9 @@
                             </div>
                             <p class="view-only-note" data-permission-note="manageData" hidden>You do not have
                                 permission to manage data.</p>
-                            <div class="actions"><button id="btn-export" class="btn btn-secondary">Export Data</button>
+                            <div class="actions"><button id="btn-export" class="btn btn-secondary">Export Data</button><button
+                                    id="btn-export-accounts" class="btn btn-secondary"
+                                    data-permission="manageData">Export accounts file</button>
                             </div>
                             <div id="settings-info"></div>
                         </div>
@@ -569,6 +605,8 @@
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/accounts-data.js"></script>
+    <script src="js/accounts.js"></script>
     <script src="js/permissions.js"></script>
     <script src="js/seed.js"></script>
     <script src="js/store.js"></script>

@@ -51,7 +51,8 @@ Cohere.Tasks = (function () {
     function renderTaskFormDropdowns() {
         const assigneeSelect = document.getElementById("task-assigneeId");
         if (assigneeSelect) {
-            const members = window.Cohere.state.members.map(function (m) {
+            // Admin can assign anyone; others only members of their own organization
+            const members = window.Cohere.state.members.filter(function (m) { return Cohere.Permissions.canManageOrgData(m.orgId); }).map(function (m) {
                 const org = Cohere.Store.getOrg(m.orgId);
                 const orgName = org ? org.name : "Unknown";
                 return { value: m.id, label: m.fullName + " — " + orgName };
@@ -118,7 +119,7 @@ Cohere.Tasks = (function () {
 
         const assigneeFilter = document.getElementById("task-filter-assignee");
         if (assigneeFilter) {
-            const members = window.Cohere.state.members.map(function (m) {
+            const members = window.Cohere.state.members.filter(function (m) { return Cohere.Permissions.canManageOrgData(m.orgId); }).map(function (m) {
                 return { value: m.id, label: m.fullName };
             });
             const current = assigneeFilter.value;
@@ -278,7 +279,7 @@ Cohere.Tasks = (function () {
         const filterAssignee = document.getElementById("task-filter-assignee").value;
         const sortBy = document.getElementById("task-sort").value || "deadline-asc";
 
-        let tasks = window.Cohere.state.tasks.slice();
+        let tasks = Cohere.Store.visibleTasks();
 
         // Filter by title or assignee name (E16)
         if (search) {
@@ -341,8 +342,10 @@ Cohere.Tasks = (function () {
 
             const actionsTd = Cohere.Utils.createEl("td");
 
-            // 1. Manage Tasks permissions (Edit / Delete)
-            if (Cohere.Permissions.can("manageTasks")) {
+            const canEditTask = Cohere.Permissions.canUpdateTask(t);
+
+            // 1. Edit / Delete (own organization's tasks only)
+            if (canEditTask) {
                 const editBtn = Cohere.Utils.createEl("button", {
                     textContent: "Edit",
                     className: "btn btn-secondary",
@@ -358,19 +361,19 @@ Cohere.Tasks = (function () {
                 actionsTd.appendChild(deleteBtn);
             }
 
-            // 2. canUpdateTask permission (Complete / Reopen)
-            if (Cohere.Permissions.canUpdateTask(t)) {
+            // 2. Complete / Reopen
+            if (canEditTask) {
                 const toggleLabel = t.status === "Completed" ? "Reopen" : "Complete";
                 const toggleBtn = Cohere.Utils.createEl("button", {
                     textContent: toggleLabel,
                     className: "btn",
                     dataset: { action: "toggle", id: t.id },
-                    style: (Cohere.Permissions.can("manageTasks") ? "margin-left: 4px;" : "")
+                    style: "margin-left: 4px;"
                 });
                 actionsTd.appendChild(toggleBtn);
             }
 
-            if (!Cohere.Permissions.can("manageTasks") && !Cohere.Permissions.canUpdateTask(t)) {
+            if (!canEditTask) {
                 actionsTd.textContent = "—";
             }
 

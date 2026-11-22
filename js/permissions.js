@@ -2,88 +2,101 @@ window.Cohere = window.Cohere || {};
 Cohere.Permissions = (function () {
     "use strict";
 
-    let viewingAs = "admin";
+    // The signed-in account (from js/accounts-data.js or created in the app).
+    // There is no way to switch account or role without signing out and logging in again.
+    let account = null;
 
-    // Initializes the viewing as selector and validates saved profile
-    function init() {
-        const select = document.getElementById("viewing-as");
-        if (select) {
-            select.addEventListener("change", function () {
-                setViewingAs(select.value);
-            });
-        }
+    function init() { account = Cohere.Accounts.getSession(); }
+
+    function signIn(acc) {
+        account = acc;
+        Cohere.Accounts.setSession(acc.username);
     }
 
-    // Rebuilds the dropdown options
-    function renderSelector() {
-        const select = document.getElementById("viewing-as");
-        if (!select) return;
-        const items = [{ value: "admin", label: "Administrator (demo)" }];
-        if (Cohere.state && Cohere.state.members) {
-            Cohere.state.members.forEach(function (m) {
-                const org = Cohere.state.organizations.find(function (o) { return o.id === m.orgId; });
-                const orgName = org ? org.name : "Unknown Org";
-                items.push({ value: m.id, label: m.fullName + " — " + m.position + " (" + orgName + ")" });
-            });
-        }
-        Cohere.Utils.populateSelect(select, items, null);
-        select.value = viewingAs;
+    function signOut() {
+        account = null;
+        Cohere.Accounts.clearSession();
     }
 
-    // Returns the current viewing as ID
-    function getViewingAs() {
-        return viewingAs;
+    function isSignedIn() { return !!account; }
+
+    // Shows who is signed in (read-only) in the header
+    function renderUser() {
+        const el = document.getElementById("user-name");
+        if (!el) return;
+        const actor = getActor();
+        el.textContent = actor.isAdmin ? actor.name : actor.name + " · " + actor.role;
     }
 
-    // Sets the viewing as ID and saves to state
-    function setViewingAs(id) {
-        viewingAs = id;
-        if (Cohere.state && Cohere.state.settings) {
-            Cohere.state.settings.viewingAs = id;
-            if (Cohere.Storage) Cohere.Storage.save(Cohere.Config.KEYS.settings, Cohere.state.settings);
-        }
-        const label = getActor().name;
-        if (Cohere.UI) Cohere.UI.showToast("Now viewing as " + label + ".", "success");
-        if (Cohere.App) Cohere.App.renderAll();
-    }
-
-    // Returns the current actor object
+    // The role always comes from the account, never from the editable member list.
     function getActor() {
-        if (viewingAs === "admin") {
-            return { id: "admin", name: "Administrator (demo)", position: "", isAdmin: true };
+        if (!account) return { id: null, name: "Guest", role: "", position: "", orgId: null, isAdmin: false };
+        if (Cohere.Accounts.isAdmin(account)) {
+            return { id: "admin", name: account.name, role: "Admin", position: "Admin", orgId: null, isAdmin: true };
         }
-        if (Cohere.state && Cohere.state.members) {
-            const m = Cohere.state.members.find(function (mem) { return mem.id === viewingAs; });
-            if (m) {
-                return { id: m.id, name: m.fullName, position: m.position, isAdmin: false };
-            }
+        const member = Cohere.Accounts.findMember(account);
+        let orgId = member ? member.orgId : null;
+        if (!orgId && account.org) {
+            const org = Cohere.state.organizations.find(function (o) {
+                return o.name.toLowerCase() === String(account.org).toLowerCase();
+            });
+            orgId = org ? org.id : null;
         }
-        // Fallback if member was deleted
-        return { id: "admin", name: "Administrator (demo)", position: "", isAdmin: true };
+        return {
+            id: member ? member.id : account.username,
+            name: member ? member.fullName : account.name,
+            role: account.role,
+            position: member && member.position ? member.position : account.role,
+            orgId: orgId,
+            isAdmin: false
+        };
     }
 
-    // M9: Checks if the current actor can perform the action
     function can(action) {
         const actor = getActor();
         if (actor.isAdmin) return true;
-
-        const allowedActions = Cohere.Config.PERMISSIONS[actor.position] || [];
-        return allowedActions.includes(action);
+        if (!account) return false;
+        return (Cohere.Config.PERMISSIONS[actor.role] || []).includes(action);
     }
 
-    // M9: Checks if the actor can update a specific task (manageTasks OR is the assignee)
-    function canUpdateTask(task) {
-        if (can("manageTasks")) return true;
+    // Admin: any organization. Everyone else: only data that belongs to their own organization.
+    function canManageOrgData(orgId) {
         const actor = getActor();
-        return task.assigneeId === actor.id;
+        return actor.isAdmin || (!!orgId && actor.orgId === orgId);
     }
 
-    // Returns a deny message for an action
+    // Edit / delete / complete a task (only tasks of your own organization)
+    function canUpdateTask(task) {
+        return can("manageTasks") && canManageOrgData(Cohere.Store.taskOrgId(task));
+    }
+
+    // Edit / cancel / delete a meeting (only meetings of your own organization)
+    function canManageMeeting(appt) {
+        return can("manageMeetings") && canManageOrgData(Cohere.Store.apptOrgId(appt));
+    }
+
+    function canMarkAttendance(appt) {
+        return can("markAttendance") && canManageOrgData(Cohere.Store.apptOrgId(appt));
+    }
+
+    // Admin: any organization. President: only their own organization.
+    function canManageOrgMembers(orgId) {
+        if (!can("manageMembers")) return false;
+        const actor = getActor();
+        return actor.isAdmin || (!!orgId && actor.orgId === orgId);
+    }
+
+    // Presidents cannot edit or remove the President (only the Admin can).
+    function canManageMember(member) {
+        if (!member || !canManageOrgMembers(member.orgId)) return false;
+        return getActor().isAdmin || member.role !== "President";
+    }
+
     function denyMessage(action) {
         const actor = getActor();
         const label = Cohere.Config.ACTION_LABELS[action] || action;
-        return "Viewing as " + actor.name + " (" + (actor.position || "Administrator") + "): you do not have permission to " + label + ".";
+        return "Signed in as " + actor.name + " (" + (actor.role || "Guest") + "): you do not have permission to " + label + ".";
     }
 
-    return { init, renderSelector, getViewingAs, setViewingAs, getActor, can, canUpdateTask, denyMessage };
+    return { init, signIn, signOut, isSignedIn, renderUser, getActor, can, canManageOrgData, canUpdateTask, canManageMeeting, canMarkAttendance, canManageOrgMembers, canManageMember, denyMessage };
 })();

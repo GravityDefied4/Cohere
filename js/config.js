@@ -13,7 +13,9 @@ Cohere.Config = (function () {
         settings: "cohere.v1.settings"
     };
 
-    const POSITIONS = ["President", "Vice President", "Secretary", "Treasurer", "Auditor", "Public Information Officer", "Representative", "Member"];
+    // Roles: Admin (account only), President, Executive, Member
+    const ROLES = ["President", "Executive", "Member"];
+    const MEMBER_STATUSES = ["Active", "Inactive"];
     const PRIORITIES = ["Low", "Medium", "High"];
     const TASK_STATUSES = ["Pending", "In Progress", "Completed"];
     const APPT_STATUSES = ["Scheduled", "Completed", "Cancelled"];
@@ -24,21 +26,22 @@ Cohere.Config = (function () {
     const MAX_NOTIFICATIONS = 100;
 
     // M9: Actions and Permissions
-    const ACTIONS = ["manageMembers", "manageTasks", "manageMeetings", "markAttendance", "manageData"];
+    const ACTIONS = ["viewActivity", "viewSettings", "manageOrgs", "assignPresident", "manageMembers", "manageTasks", "manageMeetings", "markAttendance", "manageData"];
 
+    // Admin can do everything (see Permissions.can). Only Admin can view the Activity log and Settings.
+    // President: manage members, tasks, meetings and attendance of their OWN organization.
+    // Executive: same, but cannot add or change members. Member: view only.
     const PERMISSIONS = {
-        "Administrator (demo)": ["manageMembers", "manageTasks", "manageMeetings", "markAttendance", "manageData"],
-        "President": ["manageMembers", "manageTasks", "manageMeetings", "markAttendance", "manageData"],
-        "Vice President": ["manageMembers", "manageTasks", "manageMeetings", "markAttendance", "manageData"],
-        "Secretary": ["manageTasks", "manageMeetings", "markAttendance"],
-        "Treasurer": [],
-        "Auditor": [],
-        "Public Information Officer": [],
-        "Representative": [],
+        "President": ["manageMembers", "manageTasks", "manageMeetings", "markAttendance"],
+        "Executive": ["manageTasks", "manageMeetings", "markAttendance"],
         "Member": []
     };
 
     const ACTION_LABELS = {
+        viewActivity: "view the activity log",
+        viewSettings: "open settings",
+        manageOrgs: "create or manage organizations",
+        assignPresident: "assign a president",
         manageMembers: "manage members",
         manageTasks: "manage tasks",
         manageMeetings: "manage meetings",
@@ -47,7 +50,7 @@ Cohere.Config = (function () {
     };
 
     return {
-        KEYS, POSITIONS, PRIORITIES, TASK_STATUSES, APPT_STATUSES, ATT_STATUSES,
+        KEYS, ROLES, MEMBER_STATUSES, PRIORITIES, TASK_STATUSES, APPT_STATUSES, ATT_STATUSES,
         WEIGHTS, REMINDER_DAYS, MAX_ACTIVITY, MAX_NOTIFICATIONS,
         ACTIONS, PERMISSIONS, ACTION_LABELS
     };

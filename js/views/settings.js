@@ -19,6 +19,9 @@ Cohere.Settings = (function () {
         const exportBtn = document.getElementById("btn-export");
         if (exportBtn) exportBtn.addEventListener("click", handleExport);
 
+        const exportAccBtn = document.getElementById("btn-export-accounts");
+        if (exportAccBtn) exportAccBtn.addEventListener("click", handleExportAccounts);
+
         const importInput = document.getElementById("input-import");
         if (importInput) importInput.addEventListener("change", handleImport);
     }
@@ -56,6 +59,8 @@ Cohere.Settings = (function () {
             window.Cohere.state[key] = seed[key];
         });
 
+        Cohere.Accounts.clearStored();
+
         // Log the action AFTER loading so it appears in the new log
         Cohere.Activity.log("settings", "Loaded sample data");
 
@@ -83,9 +88,28 @@ Cohere.Settings = (function () {
             settings: { seeded: false, schemaVersion: 1, viewingAs: "admin" }
         };
 
+        Cohere.Accounts.clearStored();
         Cohere.Storage.saveAll();
         Cohere.UI.showToast("All data reset.", "success");
         Cohere.App.renderAll();
+    }
+
+    // Export accounts: download a replacement for js/accounts-data.js
+    function handleExportAccounts() {
+        if (!Cohere.Permissions.can("manageData")) {
+            Cohere.UI.showToast(Cohere.Permissions.denyMessage("manageData"), "error");
+            return;
+        }
+        const blob = new Blob([Cohere.Accounts.exportSource()], { type: "text/javascript" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "accounts-data.js";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        Cohere.UI.showToast("accounts-data.js downloaded. Replace js/accounts-data.js with it to keep these accounts.", "success");
     }
 
     // Export Data: download the entire state as a JSON file

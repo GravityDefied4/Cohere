@@ -6,6 +6,15 @@
 .theme-toggle {
     border: 1.5px solid var(--line);
     background: var(--white);
+    color: var(--text);
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+}
+
+.theme-toggle:hover {
+    background: var(--hover);
 }
 
 .theme-toggle .i-sun {
@@ -20,15 +29,47 @@
     display: none;
 }
 
-#login-screen {
-    position: relative;
+/* labelled theme button next to the Login title */
+.login-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
 }
 
-.login-theme {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    z-index: 5;
+.login-head .title-bar {
+    margin-bottom: 0;
+}
+
+.theme-toggle-labeled {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    height: 40px;
+    padding: 0 16px 0 12px;
+    border-radius: 99px;
+    font-size: .85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.theme-toggle-labeled .ic {
+    width: 18px;
+    height: 18px;
+}
+
+.theme-toggle-labeled .tt-to-light {
+    display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle-labeled .tt-to-dark {
+    display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle-labeled .tt-to-light {
+    display: inline;
 }
 
 html.theme-anim *,

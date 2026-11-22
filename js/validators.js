@@ -2,6 +2,14 @@ window.Cohere = window.Cohere || {};
 Cohere.Validators = (function () {
     "use strict";
 
+    // Student login formats
+    //   email:      name.123.stud@cdd.edu.ph
+    //   student ID: 24-1234-123
+    const STUDENT_EMAIL_RE = /^[a-z]+(?:[._-][a-z]+)*\.\d+\.stud@cdd\.edu\.ph$/i;
+    const STUDENT_ID_RE = /^\d{2}-\d{4}-\d{3}$/;
+    function isStudentEmail(v) { return STUDENT_EMAIL_RE.test(String(v || "").trim()); }
+    function isStudentId(v) { return STUDENT_ID_RE.test(String(v || "").trim()); }
+
     // Validates organization form values
     function validateOrg(values, editingId) {
         const errors = {};
@@ -37,7 +45,8 @@ Cohere.Validators = (function () {
         const fullName = (values.fullName || "").trim();
         const studentId = (values.studentId || "").trim();
         const orgId = values.orgId || "";
-        const position = values.position || "";
+        const role = values.role || "";
+        const specificRole = (values.specificRole || "").trim();
         const yearSection = (values.yearSection || "").trim();
         const email = (values.email || "").trim();
 
@@ -49,8 +58,8 @@ Cohere.Validators = (function () {
         }
 
         // Student ID: required, /^[A-Za-z0-9-]{4,20}$/, unique
-        if (!studentId || !/^[A-Za-z0-9-]{4,20}$/.test(studentId)) {
-            errors["member-studentId"] = "Enter a valid student ID.";
+        if (!studentId || !isStudentId(studentId)) {
+            errors["member-studentId"] = "Use the format 24-1234-123.";
         } else {
             const duplicate = window.Cohere.state.members.some(function (m) {
                 return m.id !== editingId && m.studentId === studentId;
@@ -67,9 +76,14 @@ Cohere.Validators = (function () {
             errors["member-orgId"] = "Select an organization.";
         }
 
-        // Position: required
-        if (!position || !Cohere.Config.POSITIONS.includes(position)) {
-            errors["member-position"] = "Select a position.";
+        // Role: required (President is only assigned by the Admin)
+        if (!role || !Cohere.Config.ROLES.includes(role)) {
+            errors["member-role"] = "Select a role.";
+        }
+
+        // Specific role (office or committee): optional, up to 40 chars
+        if (specificRole.length > 40) {
+            errors["member-specificRole"] = "Specific role is too long (max 40).";
         }
 
         // Year/section: optional, up to 20 chars
@@ -78,10 +92,29 @@ Cohere.Validators = (function () {
         }
 
         // Email: optional, valid format
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            errors["member-email"] = "Enter a valid email address.";
+        if (email && !isStudentEmail(email)) {
+            errors["member-email"] = "Use a student email like name.123.stud@cdd.edu.ph.";
         }
 
+        return { valid: Object.keys(errors).length === 0, errors: errors };
+    }
+
+    // Validates the Admin's "Assign president" form
+    function validatePresident(values) {
+        const errors = {};
+        const fullName = (values.fullName || "").trim();
+        const studentId = (values.studentId || "").trim();
+        const email = (values.email || "").trim();
+
+        if (!fullName || fullName.length < 2 || fullName.length > 60 || !/^[A-Za-z\s.'\-]+$/.test(fullName)) {
+            errors["pres-fullName"] = "Enter a valid full name.";
+        }
+        if (!studentId || !isStudentId(studentId)) {
+            errors["pres-studentId"] = "Use the format 24-1234-123.";
+        }
+        if (email && !isStudentEmail(email)) {
+            errors["pres-email"] = "Use a student email like name.123.stud@cdd.edu.ph.";
+        }
         return { valid: Object.keys(errors).length === 0, errors: errors };
     }
 
@@ -220,5 +253,5 @@ Cohere.Validators = (function () {
         return { valid: Object.keys(errors).length === 0, errors: errors };
     }
     
-    return { validateOrg, validateMember, validateTask, validateAppointment };
+    return { isStudentEmail, isStudentId, validateOrg, validateMember, validatePresident, validateTask, validateAppointment };
 })();

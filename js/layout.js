@@ -7,8 +7,7 @@ Cohere.Layout = (function () {
         dashboard: "Overview", members: "Organization", tasks: "Task Delegation", appointments: "Schedule",
         attendance: "Attendance", performance: "Performance", activity: "Activity Log", settings: "Settings"
     };
-    const EDIT_TARGETS = { "org-list": "org-panel", "member-table-body": "member-panel", "task-list": "task-panel", "appt-list": "appt-panel" };
-    const SESSION_KEY = "cohere.session";
+    const EDIT_TARGETS = { "org-detail": "org-panel", "member-table-body": "member-panel", "task-list": "task-panel", "appt-list": "appt-panel" };
     const $ = function (id) { return document.getElementById(id); };
 
     // ---- Theme (light / dark) ----------------------------------------------
@@ -41,30 +40,38 @@ Cohere.Layout = (function () {
         }
     }
 
-    // ---- Login (UI gate only: the app has no real accounts) -----------------
-    function isSignedIn() { try { return sessionStorage.getItem(SESSION_KEY) === "1"; } catch (e) { return true; } }
-    function setSignedIn(v) { try { v ? sessionStorage.setItem(SESSION_KEY, "1") : sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ } }
+    // ---- Login (checked against the accounts in js/accounts.js) -------------
+    function isSignedIn() { return Cohere.Permissions.isSignedIn(); }
     function showApp(on) { $("login-screen").hidden = on; $("app").hidden = !on; }
 
     function handleLogin(e) {
         e.preventDefault();
-        const id = $("login-id").value.trim().toLowerCase();
+        const id = $("login-id").value.trim();
+        const pw = $("login-pw").value;
         const err = $("login-error");
         err.hidden = true;
-        if (!$("login-pw").value) { err.textContent = "Please enter your password."; err.hidden = false; return; }
-        const members = (Cohere.state && Cohere.state.members) || [];
-        const match = id ? members.find(function (m) {
-            return (m.email || "").toLowerCase() === id || (m.studentId || "").toLowerCase() === id;
-        }) : null;
-        if (id && !match) { err.textContent = "No member found with that email or student ID."; err.hidden = false; return; }
-        setSignedIn(true);
-        Cohere.Permissions.setViewingAs(match ? match.id : "admin");
+        if (!id || !pw) { err.textContent = "Please enter your email or student ID and your password."; err.hidden = false; return; }
+        const V = Cohere.Validators;
+        const isAdminName = id.toLowerCase() === "admin";
+        if (!isAdminName && !V.isStudentEmail(id) && !V.isStudentId(id)) {
+            err.textContent = "Enter a student email (name.123.stud@cdd.edu.ph) or a student ID (24-1234-123).";
+            err.hidden = false; $("login-id").focus(); return;
+        }
+        const account = Cohere.Accounts.authenticate(id, pw);
+        if (!account) { err.textContent = "Incorrect email/student ID or password."; err.hidden = false; return; }
+        const linked = Cohere.Accounts.findMember(account);
+        if (linked && linked.status === "Inactive") { err.textContent = "This account is inactive. Please contact your organization president."; err.hidden = false; return; }
+        Cohere.Permissions.signIn(account);
+        $("login-id").value = "";
         $("login-pw").value = "";
         showApp(true);
+        Cohere.App.renderAll();
+        Cohere.App.showView("dashboard");
+        Cohere.UI.showToast("Welcome, " + Cohere.Permissions.getActor().name + ".", "success");
     }
 
     function logout() {
-        setSignedIn(false);
+        Cohere.Permissions.signOut();
         closeAllPanels();
         showApp(false);
         $("login-id").focus();
@@ -73,7 +80,7 @@ Cohere.Layout = (function () {
     // ---- Header chrome ------------------------------------------------------
     function refresh() {
         const actor = Cohere.Permissions.getActor();
-        $("role-pill").textContent = actor.position || "Administrator";
+        $("role-pill").textContent = actor.role || "Guest";
         $("avatar").textContent = (actor.name || "A").trim().charAt(0).toUpperCase();
     }
     function onView(name) {
@@ -143,7 +150,7 @@ Cohere.Layout = (function () {
         document.addEventListener("click", function (e) {
             const btn = e.target.closest("button[data-action='edit']");
             if (!btn) return;
-            const host = btn.closest("#org-list, #member-table-body, #task-list, #appt-list");
+            const host = btn.closest("#org-detail, #member-table-body, #task-list, #appt-list");
             if (host && EDIT_TARGETS[host.id]) openPanel(EDIT_TARGETS[host.id]);
         }, true);
 

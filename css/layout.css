@@ -233,6 +233,19 @@
     outline: none;
 }
 
+.user-pill {
+    padding-right: 14px;
+}
+
+.user-name {
+    font-size: .85rem;
+    font-weight: 500;
+    max-width: 230px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .select-pill:focus-within {
     box-shadow: 0 0 0 3px rgba(22, 52, 230, .3);
 }

@@ -1,0 +1,120 @@
+/* Organization tab: org picker (wireframe), members card */
+
+.org-picker {
+    position: relative;
+    margin-bottom: 22px;
+}
+
+.org-picker-btn,
+.org-picker-list li {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 16px 22px;
+    text-align: left;
+    color: var(--text);
+    font: inherit;
+}
+
+.org-picker-btn {
+    background: var(--white);
+    border: 1.5px solid var(--line);
+    border-radius: 24px;
+    cursor: pointer;
+}
+
+.org-picker-btn .chev {
+    width: 22px;
+    height: 22px;
+    margin-left: auto;
+    flex: none;
+    transition: transform .15s;
+}
+
+.org-picker.open .chev {
+    transform: rotate(180deg);
+}
+
+.org-picker.single .chev {
+    display: none;
+}
+
+.org-picker.single .org-picker-btn {
+    cursor: default;
+}
+
+.org-picker-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    background: var(--white);
+    border: 1.5px solid var(--line);
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.org-picker-list[hidden] {
+    display: none;
+}
+
+.org-picker-list li {
+    cursor: pointer;
+}
+
+.org-picker-list li:hover,
+.org-picker-list li.is-selected {
+    background: var(--hover);
+}
+
+.org-picker-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.org-picker-text strong {
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.org-picker-text span {
+    font-size: .85rem;
+    color: var(--color-muted);
+}
+
+.org-orb {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, #060b3a 0%, #0417a4 30%, #1634e6 50%, rgba(175, 200, 220, .55) 74%, rgba(175, 200, 220, 0) 100%);
+}
+
+.org-detail {
+    margin: 0 0 18px;
+}
+
+.org-detail-line {
+    margin: 0 0 12px;
+}
+
+.org-detail .actions.wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+@media (max-width: 600px) {
+    .org-picker-btn,
+    .org-picker-list li {
+        padding: 12px 14px;
+        gap: 12px;
+    }
+
+    .org-orb {
+        width: 40px;
+        height: 40px;
+    }
+}

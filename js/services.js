@@ -138,7 +138,7 @@ Cohere.Services = (function () {
         const dueSoonEnd = Cohere.Utils.addDays(today, Cohere.Config.REMINDER_DAYS);
         const nowIso = today; // date-only comparison for upcoming meetings
 
-        const tasks = state.tasks || [];
+        const tasks = Cohere.Store.visibleTasks();
         const appointments = state.appointments || [];
         const members = state.members || [];
 

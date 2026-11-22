@@ -1,217 +1,210 @@
 window.Cohere = window.Cohere || {};
+// Organization tab: org picker, Admin tools (create organizations, assign president),
+// President tools (add members) and the members table.
 Cohere.Members = (function () {
     "use strict";
 
-    // Initializes the members view (attach listeners once)
-    function init() {
-        // Organization form
-        const orgForm = document.getElementById("org-form");
-        if (orgForm) {
-            orgForm.addEventListener("submit", handleOrgSubmit);
-        }
+    const $ = function (id) { return document.getElementById(id); };
+    const el = function (tag, props, kids) { return Cohere.Utils.createEl(tag, props, kids); };
+    let selectedOrgId = "";
 
-        const orgCancel = document.getElementById("org-cancel");
-        if (orgCancel) {
-            orgCancel.addEventListener("click", function () {
-                resetOrgForm();
-            });
-        }
-
-        // Organization list (event delegation)
-        const orgList = document.getElementById("org-list");
-        if (orgList) {
-            orgList.addEventListener("click", function (e) {
-                const btn = e.target.closest("[data-action]");
-                if (!btn) return;
-                const id = btn.dataset.id;
-                const action = btn.dataset.action;
-
-                if (action === "edit") startEditOrg(id);
-                else if (action === "delete") handleOrgDelete(id);
-            });
-        }
-
-        // Member form
-        const memberForm = document.getElementById("member-form");
-        if (memberForm) {
-            memberForm.addEventListener("submit", handleMemberSubmit);
-        }
-
-        const memberCancel = document.getElementById("member-cancel");
-        if (memberCancel) {
-            memberCancel.addEventListener("click", function () {
-                resetMemberForm();
-            });
-        }
-
-        // Member search and filter
-        const memberSearch = document.getElementById("member-search");
-        if (memberSearch) {
-            memberSearch.addEventListener("input", renderMemberTable);
-        }
-
-        const memberFilterOrg = document.getElementById("member-filter-org");
-        if (memberFilterOrg) {
-            memberFilterOrg.addEventListener("change", renderMemberTable);
-        }
-
-        // Member table (event delegation)
-        const memberTableBody = document.getElementById("member-table-body");
-        if (memberTableBody) {
-            memberTableBody.addEventListener("click", function (e) {
-                const btn = e.target.closest("[data-action]");
-                if (!btn) return;
-                const id = btn.dataset.id;
-                const action = btn.dataset.action;
-
-                if (action === "edit") startEditMember(id);
-                else if (action === "delete") handleMemberDelete(id);
-            });
-        }
-    }
-
-    // Renders the entire members view
-    function render() {
-        renderOrgList();
-        renderOrgForm();
-        renderMemberForm();
-        renderMemberTable();
-    }
-
-    // Renders the organization list
-    function renderOrgList() {
-        const list = document.getElementById("org-list");
-        if (!list) return;
-
-        Cohere.Utils.clearEl(list);
-
+    // Organizations the signed-in person may see: Admin sees all, others only their own
+    function visibleOrgs() {
+        const actor = Cohere.Permissions.getActor();
         const orgs = window.Cohere.state.organizations;
+        if (actor.isAdmin) return orgs;
+        return orgs.filter(function (o) { return o.id === actor.orgId; });
+    }
 
-        if (orgs.length === 0) {
-            const empty = Cohere.Utils.createEl("li", {
-                textContent: "No organizations yet. Use the form to add one.",
-                className: "text-muted"
-            });
-            list.appendChild(empty);
-            return;
+    function ensureSelection() {
+        const orgs = visibleOrgs();
+        if (!orgs.some(function (o) { return o.id === selectedOrgId; })) {
+            selectedOrgId = orgs.length ? orgs[0].id : "";
         }
+    }
 
-        orgs.forEach(function (org) {
-            const li = Cohere.Utils.createEl("li");
-            li.style.padding = "12px";
-            li.style.borderBottom = "1px solid var(--color-border)";
+    function selectedOrg() { return Cohere.Store.getOrg(selectedOrgId); }
 
-            const memberCount = window.Cohere.state.members.filter(function (m) { return m.orgId === org.id; }).length;
+    function init() {
+        // Org picker
+        $("org-picker-btn").addEventListener("click", function () { togglePicker(); });
+        $("org-picker-list").addEventListener("click", function (e) {
+            const item = e.target.closest("[data-org]");
+            if (!item) return;
+            selectedOrgId = item.dataset.org;
+            togglePicker(false);
+            resetMemberForm();
+            Cohere.Layout.closePanel("member-panel");
+            Cohere.Layout.closePanel("president-panel");
+            render();
+        });
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest("#org-picker")) togglePicker(false);
+        });
 
-            const header = Cohere.Utils.createEl("div", {
-                textContent: org.name + " (" + memberCount + " member" + (memberCount !== 1 ? "s" : "") + ")",
-                style: "font-weight: 600; margin-bottom: 4px;"
-            });
+        // Organization form (Admin)
+        $("org-form").addEventListener("submit", handleOrgSubmit);
+        $("org-cancel").addEventListener("click", resetOrgForm);
+        $("org-detail").addEventListener("click", function (e) {
+            const btn = e.target.closest("[data-action]");
+            if (!btn) return;
+            if (btn.dataset.action === "edit") startEditOrg(btn.dataset.id);
+            else if (btn.dataset.action === "delete") handleOrgDelete(btn.dataset.id);
+            else if (btn.dataset.action === "assign") openPresidentForm();
+        });
+        $("president-form").addEventListener("submit", handlePresidentSubmit);
 
-            const desc = Cohere.Utils.createEl("div", {
-                textContent: org.description || "No description",
-                className: "text-muted",
-                style: "font-size: 0.875rem; margin-bottom: 8px;"
-            });
-
-            li.appendChild(header);
-            li.appendChild(desc);
-
-            if (Cohere.Permissions.can("manageMembers")) {
-                const actions = Cohere.Utils.createEl("div", { style: "display: flex; gap: 8px;" });
-
-                const editBtn = Cohere.Utils.createEl("button", {
-                    textContent: "Edit",
-                    className: "btn btn-secondary",
-                    dataset: { action: "edit", id: org.id }
-                });
-
-                const deleteBtn = Cohere.Utils.createEl("button", {
-                    textContent: "Delete",
-                    className: "btn btn-danger",
-                    dataset: { action: "delete", id: org.id }
-                });
-
-                actions.appendChild(editBtn);
-                actions.appendChild(deleteBtn);
-                li.appendChild(actions);
-            }
-
-            list.appendChild(li);
+        // Member form + filters + table
+        $("member-form").addEventListener("submit", handleMemberSubmit);
+        $("member-cancel").addEventListener("click", resetMemberForm);
+        $("btn-add-member").addEventListener("click", function () { resetMemberForm(); });
+        $("member-search").addEventListener("input", renderMemberTable);
+        $("member-filter-office").addEventListener("change", renderMemberTable);
+        $("member-filter-status").addEventListener("change", renderMemberTable);
+        $("member-table-body").addEventListener("click", function (e) {
+            const btn = e.target.closest("[data-action]");
+            if (!btn) return;
+            const id = btn.dataset.id;
+            if (btn.dataset.action === "edit") startEditMember(id);
+            else if (btn.dataset.action === "delete") handleMemberDelete(id);
+            else if (btn.dataset.action === "toggle") handleToggleStatus(id);
         });
     }
 
-    // Renders the organization form (for editing)
-    function renderOrgForm() {
-        const editingId = document.getElementById("org-id").value;
-        if (!editingId) return;
-
-        const org = Cohere.Store.getOrg(editingId);
-        if (!org) return;
-
-        document.getElementById("org-name").value = org.name;
-        document.getElementById("org-desc").value = org.description;
-        document.getElementById("org-submit").textContent = "Update Organization";
-        document.getElementById("org-cancel").hidden = false;
+    function render() {
+        ensureSelection();
+        renderOrgPicker();
+        renderOrgDetail();
+        renderMemberForm();
+        renderFilters();
+        renderMemberTable();
+        // Adding members needs an organization the person manages
+        const addBtn = $("btn-add-member");
+        if (addBtn && Cohere.Permissions.can("manageMembers")) {
+            addBtn.hidden = !Cohere.Permissions.canManageOrgMembers(selectedOrgId);
+        }
     }
 
-    // Handles organization form submission
+    // ---- Org picker ---------------------------------------------------------
+    function togglePicker(force) {
+        const list = $("org-picker-list");
+        const open = typeof force === "boolean" ? force : list.hidden;
+        list.hidden = !open || list.children.length < 2;
+        $("org-picker-btn").setAttribute("aria-expanded", String(!list.hidden));
+        $("org-picker").classList.toggle("open", !list.hidden);
+    }
+
+    function renderOrgPicker() {
+        const org = selectedOrg();
+        const orgs = visibleOrgs();
+        $("org-picker-name").textContent = org ? org.name : "No organization";
+        $("org-picker-desc").textContent = org ? (org.description || "No description") :
+            (Cohere.Permissions.can("manageOrgs") ? "Use “Add organization” to create one." : "You are not assigned to an organization yet.");
+        $("org-picker").classList.toggle("single", orgs.length < 2);
+
+        const list = $("org-picker-list");
+        Cohere.Utils.clearEl(list);
+        orgs.forEach(function (o) {
+            const li = el("li", { dataset: { org: o.id }, tabindex: "0", className: o.id === selectedOrgId ? "is-selected" : "" });
+            li.appendChild(el("span", { className: "org-orb", "aria-hidden": "true" }));
+            li.appendChild(el("span", { className: "org-picker-text" }, [
+                el("strong", { textContent: o.name }),
+                el("span", { textContent: o.description || "No description" })
+            ]));
+            list.appendChild(li);
+        });
+        list.hidden = true;
+        $("org-picker-btn").setAttribute("aria-expanded", "false");
+        $("org-picker").classList.remove("open");
+    }
+
+    // ---- Admin: details of the selected organization -----------------------
+    function renderOrgDetail() {
+        const box = $("org-detail");
+        if (!box) return;
+        Cohere.Utils.clearEl(box);
+        const org = selectedOrg();
+        if (!org || !Cohere.Permissions.can("manageOrgs")) return;
+
+        const pres = Cohere.Store.getPresident(org.id);
+        const count = window.Cohere.state.members.filter(function (m) { return m.orgId === org.id; }).length;
+        box.appendChild(el("p", { className: "org-detail-line" }, [
+            el("strong", { textContent: "President: " }),
+            pres ? pres.fullName + " (" + pres.studentId + ")" : "Not assigned yet",
+            " · " + count + " member" + (count !== 1 ? "s" : "")
+        ]));
+        const actions = el("div", { className: "actions wrap" });
+        actions.appendChild(el("button", { type: "button", className: "btn", textContent: pres ? "Change president" : "Assign president", dataset: { action: "assign", id: org.id } }));
+        actions.appendChild(el("button", { type: "button", className: "btn btn-secondary", textContent: "Edit organization", dataset: { action: "edit", id: org.id } }));
+        actions.appendChild(el("button", { type: "button", className: "btn btn-danger-o", textContent: "Delete organization", dataset: { action: "delete", id: org.id } }));
+        box.appendChild(actions);
+    }
+
+    function openPresidentForm() {
+        const org = selectedOrg();
+        if (!org) return;
+        const form = $("president-form");
+        form.reset();
+        Cohere.UI.clearFieldErrors(form);
+        $("president-title").textContent = "Assign president · " + org.name;
+        Cohere.Layout.openPanel("president-panel");
+    }
+
+    function handlePresidentSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const values = {
+            fullName: $("pres-fullName").value,
+            studentId: $("pres-studentId").value,
+            email: $("pres-email").value
+        };
+        Cohere.UI.clearFieldErrors(form);
+        const v = Cohere.Validators.validatePresident(values);
+        if (!v.valid) { Cohere.UI.showFieldErrors(form, v.errors); return; }
+
+        const result = Cohere.Store.assignPresident(selectedOrgId, values);
+        if (!result.ok) { Cohere.UI.showToast(result.error, "error"); return; }
+        form.reset();
+        Cohere.UI.showToast(result.created
+            ? "President assigned. Sign-in: " + result.account.studentId + " · first password: " + result.account.password
+            : "President assigned.", "success");
+        Cohere.App.renderAll();
+    }
+
+    // ---- Organization form (Admin) -----------------------------------------
     function handleOrgSubmit(e) {
         e.preventDefault();
-
         const form = e.target;
-        const editingId = document.getElementById("org-id").value;
-
-        const values = {
-            name: document.getElementById("org-name").value,
-            description: document.getElementById("org-desc").value
-        };
-
+        const editingId = $("org-id").value;
+        const values = { name: $("org-name").value, description: $("org-desc").value };
         Cohere.UI.clearFieldErrors(form);
 
         const validation = Cohere.Validators.validateOrg(values, editingId || null);
-        if (!validation.valid) {
-            Cohere.UI.showFieldErrors(form, validation.errors);
-            return;
-        }
+        if (!validation.valid) { Cohere.UI.showFieldErrors(form, validation.errors); return; }
 
-        let result;
-        if (editingId) {
-            result = Cohere.Store.updateOrg(editingId, values);
-        } else {
-            result = Cohere.Store.addOrg(values);
-        }
-
-        if (result.ok) {
-            Cohere.UI.showToast(editingId ? "Organization updated." : "Organization added.", "success");
-            resetOrgForm();
-            Cohere.App.renderAll();
-        } else {
-            Cohere.UI.showToast(result.error, "error");
-        }
+        const result = editingId ? Cohere.Store.updateOrg(editingId, values) : Cohere.Store.addOrg(values);
+        if (!result.ok) { Cohere.UI.showToast(result.error, "error"); return; }
+        if (!editingId) selectedOrgId = result.data.id;
+        Cohere.UI.showToast(editingId ? "Organization updated." : "Organization added. Now assign its president.", "success");
+        resetOrgForm();
+        Cohere.App.renderAll();
     }
 
-    // Starts editing an organization
     function startEditOrg(id) {
         const org = Cohere.Store.getOrg(id);
         if (!org) return;
-
-        document.getElementById("org-id").value = org.id;
-        document.getElementById("org-name").value = org.name;
-        document.getElementById("org-desc").value = org.description;
-        document.getElementById("org-submit").textContent = "Update Organization";
-        document.getElementById("org-cancel").hidden = false;
-
-        document.getElementById("org-name").focus();
+        $("org-id").value = org.id;
+        $("org-name").value = org.name;
+        $("org-desc").value = org.description;
+        $("org-submit").textContent = "Update Organization";
+        $("org-cancel").hidden = false;
+        $("org-name").focus();
     }
 
-    // Handles organization deletion
     function handleOrgDelete(id) {
         const org = Cohere.Store.getOrg(id);
         if (!org) return;
-
         if (!Cohere.UI.confirmAction("Delete organization \"" + org.name + "\"?")) return;
-
         const result = Cohere.Store.deleteOrg(id);
         if (result.ok) {
             Cohere.UI.showToast("Organization deleted.", "success");
@@ -221,210 +214,95 @@ Cohere.Members = (function () {
         }
     }
 
-    // Resets the organization form
     function resetOrgForm() {
-        const form = document.getElementById("org-form");
-        if (form) {
-            form.reset();
-            document.getElementById("org-id").value = "";
-            document.getElementById("org-submit").textContent = "Add Organization";
-            document.getElementById("org-cancel").hidden = true;
-            Cohere.UI.clearFieldErrors(form);
-        }
+        const form = $("org-form");
+        form.reset();
+        $("org-id").value = "";
+        $("org-submit").textContent = "Add Organization";
+        $("org-cancel").hidden = true;
+        Cohere.UI.clearFieldErrors(form);
     }
 
-    // Renders the member form dropdowns
+    // ---- Member form (President) --------------------------------------------
     function renderMemberForm() {
-        const orgSelect = document.getElementById("member-orgId");
-        const positionSelect = document.getElementById("member-position");
+        const editingId = $("member-id").value;
+        const editing = editingId ? Cohere.Store.getMember(editingId) : null;
+        const roleSelect = $("member-role");
 
-        if (orgSelect) {
-            const orgs = window.Cohere.state.organizations.map(function (o) {
-                return { value: o.id, label: o.name };
-            });
-            Cohere.Utils.populateSelect(orgSelect, orgs, "Select an organization");
-        }
+        // New members are Executive or Member. A President's role is only changed by the Admin.
+        const roles = (editing && editing.role === "President") ? ["President"] : ["Executive", "Member"];
+        Cohere.Utils.populateSelect(roleSelect, roles.map(function (r) { return { value: r, label: r }; }), "Select a role");
+        roleSelect.disabled = !!(editing && editing.role === "President");
 
-        if (positionSelect) {
-            const positions = Cohere.Config.POSITIONS.map(function (p) {
-                return { value: p, label: p };
-            });
-            Cohere.Utils.populateSelect(positionSelect, positions, "Select a position");
-        }
-
-        // If editing, fill the form
-        const editingId = document.getElementById("member-id").value;
-        if (editingId) {
-            const member = Cohere.Store.getMember(editingId);
-            if (member) {
-                document.getElementById("member-fullName").value = member.fullName;
-                document.getElementById("member-studentId").value = member.studentId;
-                document.getElementById("member-orgId").value = member.orgId;
-                document.getElementById("member-position").value = member.position;
-                document.getElementById("member-yearSection").value = member.yearSection || "";
-                document.getElementById("member-email").value = member.email || "";
-                document.getElementById("member-submit").textContent = "Update Member";
-                document.getElementById("member-cancel").hidden = false;
-            }
+        $("member-orgId").value = editing ? editing.orgId : selectedOrgId;
+        if (editing) {
+            $("member-fullName").value = editing.fullName;
+            $("member-studentId").value = editing.studentId;
+            $("member-email").value = editing.email || "";
+            roleSelect.value = editing.role;
+            $("member-specificRole").value = editing.position === editing.role ? "" : editing.position;
+            $("member-submit").textContent = "Update Member";
+            $("member-cancel").hidden = false;
         }
     }
 
-    // Renders the member table with search and filter
-    function renderMemberTable() {
-        const tbody = document.getElementById("member-table-body");
-        if (!tbody) return;
-
-        Cohere.Utils.clearEl(tbody);
-
-        // Update filter dropdown
-        const filterOrg = document.getElementById("member-filter-org");
-        if (filterOrg) {
-            const currentVal = filterOrg.value;
-            const orgs = window.Cohere.state.organizations.map(function (o) {
-                return { value: o.id, label: o.name };
-            });
-            Cohere.Utils.populateSelect(filterOrg, orgs, "All organizations");
-            filterOrg.value = currentVal;
-        }
-
-        const search = (document.getElementById("member-search").value || "").toLowerCase();
-        const filterOrgId = filterOrg ? filterOrg.value : "";
-
-        let members = window.Cohere.state.members;
-
-        // Apply filters
-        if (filterOrgId) {
-            members = members.filter(function (m) { return m.orgId === filterOrgId; });
-        }
-
-        if (search) {
-            members = members.filter(function (m) {
-                return m.fullName.toLowerCase().includes(search) ||
-                    m.studentId.toLowerCase().includes(search) ||
-                    m.position.toLowerCase().includes(search);
-            });
-        }
-
-        if (members.length === 0) {
-            const tr = Cohere.Utils.createEl("tr");
-            const td = Cohere.Utils.createEl("td", {
-                textContent: "No members found.",
-                colSpan: "5",
-                className: "text-muted"
-            });
-            tr.appendChild(td);
-            tbody.appendChild(tr);
-            return;
-        }
-
-        members.forEach(function (m) {
-            const org = Cohere.Store.getOrg(m.orgId);
-            const orgName = org ? org.name : "Unknown";
-
-            const tr = Cohere.Utils.createEl("tr");
-
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: m.fullName }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: m.studentId }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: orgName }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: m.position }));
-
-            const actionsTd = Cohere.Utils.createEl("td");
-
-            if (Cohere.Permissions.can("manageMembers")) {
-                const editBtn = Cohere.Utils.createEl("button", {
-                    textContent: "Edit",
-                    className: "btn btn-secondary",
-                    dataset: { action: "edit", id: m.id }
-                });
-
-                const deleteBtn = Cohere.Utils.createEl("button", {
-                    textContent: "Delete",
-                    className: "btn btn-danger",
-                    dataset: { action: "delete", id: m.id },
-                    style: "margin-left: 4px;"
-                });
-
-                actionsTd.appendChild(editBtn);
-                actionsTd.appendChild(deleteBtn);
-            } else {
-                actionsTd.textContent = "—";
-            }
-
-            tr.appendChild(actionsTd);
-            tbody.appendChild(tr);
-        });
-    }
-
-    // Handles member form submission
     function handleMemberSubmit(e) {
         e.preventDefault();
-
         const form = e.target;
-        const editingId = document.getElementById("member-id").value;
-
+        const editingId = $("member-id").value;
         const values = {
-            fullName: document.getElementById("member-fullName").value,
-            studentId: document.getElementById("member-studentId").value,
-            orgId: document.getElementById("member-orgId").value,
-            position: document.getElementById("member-position").value,
-            yearSection: document.getElementById("member-yearSection").value,
-            email: document.getElementById("member-email").value
+            fullName: $("member-fullName").value,
+            studentId: $("member-studentId").value,
+            orgId: $("member-orgId").value,
+            role: $("member-role").value,
+            specificRole: $("member-specificRole").value,
+            email: $("member-email").value
         };
-
         Cohere.UI.clearFieldErrors(form);
 
         const validation = Cohere.Validators.validateMember(values, editingId || null);
-        if (!validation.valid) {
-            Cohere.UI.showFieldErrors(form, validation.errors);
-            return;
-        }
+        if (!validation.valid) { Cohere.UI.showFieldErrors(form, validation.errors); return; }
 
-        let result;
-        if (editingId) {
-            result = Cohere.Store.updateMember(editingId, values);
+        const result = editingId ? Cohere.Store.updateMember(editingId, values) : Cohere.Store.addMember(values);
+        if (!result.ok) { Cohere.UI.showToast(result.error, "error"); return; }
+
+        if (!editingId && result.created) {
+            Cohere.UI.showToast("Member added. Sign-in: " + result.account.studentId + " · first password: " + result.account.password, "success");
         } else {
-            result = Cohere.Store.addMember(values);
-        }
-
-        if (result.ok) {
             Cohere.UI.showToast(editingId ? "Member updated." : "Member added.", "success");
-            resetMemberForm();
+        }
+        resetMemberForm();
+        Cohere.App.renderAll();
+    }
+
+    function startEditMember(id) {
+        const member = Cohere.Store.getMember(id);
+        if (!member) return;
+        $("member-id").value = member.id;
+        renderMemberForm();
+        $("member-fullName").focus();
+    }
+
+    function handleToggleStatus(id) {
+        const member = Cohere.Store.getMember(id);
+        if (!member) return;
+        const next = member.status === "Inactive" ? "Active" : "Inactive";
+        const result = Cohere.Store.setMemberStatus(id, next);
+        if (result.ok) {
+            Cohere.UI.showToast(member.fullName + " is now " + next + ".", "success");
             Cohere.App.renderAll();
         } else {
             Cohere.UI.showToast(result.error, "error");
         }
     }
 
-    // Starts editing a member
-    function startEditMember(id) {
-        const member = Cohere.Store.getMember(id);
-        if (!member) return;
-
-        document.getElementById("member-id").value = member.id;
-        document.getElementById("member-fullName").value = member.fullName;
-        document.getElementById("member-studentId").value = member.studentId;
-        document.getElementById("member-orgId").value = member.orgId;
-        document.getElementById("member-position").value = member.position;
-        document.getElementById("member-yearSection").value = member.yearSection || "";
-        document.getElementById("member-email").value = member.email || "";
-        document.getElementById("member-submit").textContent = "Update Member";
-        document.getElementById("member-cancel").hidden = false;
-
-        document.getElementById("member-fullName").focus();
-    }
-
-    // Handles member deletion
     function handleMemberDelete(id) {
         const member = Cohere.Store.getMember(id);
         if (!member) return;
-
         const taskCount = window.Cohere.state.tasks.filter(function (t) { return t.assigneeId === id; }).length;
-        let confirmMsg = "Delete member \"" + member.fullName + "\"?";
-        if (taskCount > 0) {
-            confirmMsg += " This will also delete " + taskCount + " task(s) assigned to them.";
-        }
-
-        if (!Cohere.UI.confirmAction(confirmMsg)) return;
+        let msg = "Delete member \"" + member.fullName + "\"? Their login will stop working.";
+        if (taskCount > 0) msg += " This will also delete " + taskCount + " task(s) assigned to them.";
+        if (!Cohere.UI.confirmAction(msg)) return;
 
         const result = Cohere.Store.deleteMember(id);
         if (result.ok) {
@@ -435,16 +313,73 @@ Cohere.Members = (function () {
         }
     }
 
-    // Resets the member form
     function resetMemberForm() {
-        const form = document.getElementById("member-form");
-        if (form) {
-            form.reset();
-            document.getElementById("member-id").value = "";
-            document.getElementById("member-submit").textContent = "Add Member";
-            document.getElementById("member-cancel").hidden = true;
-            Cohere.UI.clearFieldErrors(form);
+        const form = $("member-form");
+        form.reset();
+        $("member-id").value = "";
+        $("member-submit").textContent = "Add Member";
+        $("member-cancel").hidden = true;
+        $("member-orgId").value = selectedOrgId;
+        $("member-role").disabled = false;
+        Cohere.UI.clearFieldErrors(form);
+    }
+
+    // ---- Members table ------------------------------------------------------
+    function orgMembers() {
+        return window.Cohere.state.members.filter(function (m) { return m.orgId === selectedOrgId; });
+    }
+
+    function renderFilters() {
+        const office = $("member-filter-office");
+        const status = $("member-filter-status");
+        const offices = [];
+        orgMembers().forEach(function (m) { if (m.position && offices.indexOf(m.position) === -1) offices.push(m.position); });
+        Cohere.Utils.populateSelect(office, offices.sort().map(function (p) { return { value: p, label: p }; }), "Office/Committee");
+        Cohere.Utils.populateSelect(status, Cohere.Config.MEMBER_STATUSES.map(function (s) { return { value: s, label: s }; }), "Status");
+    }
+
+    function renderMemberTable() {
+        const tbody = $("member-table-body");
+        Cohere.Utils.clearEl(tbody);
+
+        const search = ($("member-search").value || "").trim().toLowerCase();
+        const office = $("member-filter-office").value;
+        const status = $("member-filter-status").value;
+
+        const members = orgMembers().filter(function (m) {
+            if (office && m.position !== office) return false;
+            if (status && (m.status || "Active") !== status) return false;
+            return !search || m.fullName.toLowerCase().includes(search) || m.studentId.toLowerCase().includes(search);
+        });
+
+        if (members.length === 0) {
+            tbody.appendChild(el("tr", null, [el("td", { textContent: selectedOrgId ? "No members found." : "Select an organization to see its members.", colSpan: "6", className: "text-muted" })]));
+            return;
         }
+
+        const rank = { President: 0, Executive: 1, Member: 2 };
+        members.slice().sort(function (a, b) { return (rank[a.role] - rank[b.role]) || a.fullName.localeCompare(b.fullName); }).forEach(function (m) {
+            const tr = el("tr");
+            tr.appendChild(el("td", { textContent: m.fullName }));
+            tr.appendChild(el("td", { textContent: m.studentId }));
+            tr.appendChild(el("td", { textContent: m.role || "Member" }));
+            tr.appendChild(el("td", { textContent: m.position && m.position !== m.role ? m.position : "—" }));
+            const st = m.status || "Active";
+            const stTd = el("td");
+            stTd.appendChild(Cohere.UI.statusBadge(st, st === "Active" ? "completed" : "default"));
+            tr.appendChild(stTd);
+
+            const actionsTd = el("td");
+            if (Cohere.Permissions.canManageMember(m)) {
+                actionsTd.appendChild(el("button", { textContent: "Edit", className: "btn btn-secondary", dataset: { action: "edit", id: m.id } }));
+                actionsTd.appendChild(el("button", { textContent: st === "Active" ? "Deactivate" : "Activate", className: "btn btn-secondary", style: "margin-left: 4px;", dataset: { action: "toggle", id: m.id } }));
+                actionsTd.appendChild(el("button", { textContent: "Delete", className: "btn btn-danger", style: "margin-left: 4px;", dataset: { action: "delete", id: m.id } }));
+            } else {
+                actionsTd.textContent = "—";
+            }
+            tr.appendChild(actionsTd);
+            tbody.appendChild(tr);
+        });
     }
 
     return { init, render, renderMemberTable };

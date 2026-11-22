@@ -96,6 +96,9 @@ Cohere.App = (function () {
 
     // Shows a specific view
     function showView(name) {
+        // Activity log and Settings are Admin-only
+        const guard = { activity: "viewActivity", settings: "viewSettings" };
+        if (guard[name] && !Cohere.Permissions.can(guard[name])) name = "dashboard";
         document.querySelectorAll(".view").forEach(function (v) { v.hidden = true; });
         const target = document.getElementById("view-" + name);
         if (target) target.hidden = false;
@@ -115,7 +118,7 @@ Cohere.App = (function () {
 
     // Renders all views and UI components
     function renderAll() {
-        if (Cohere.Permissions) Cohere.Permissions.renderSelector();
+        if (Cohere.Permissions) Cohere.Permissions.renderUser();
 
         const views = ["Dashboard", "Members", "Tasks", "Appointments", "Attendance", "Performance", "ActivityView", "Settings"];
         views.forEach(function (v) {
@@ -132,13 +135,6 @@ Cohere.App = (function () {
     function handleStorageChange(e) {
         if (e.key && e.key.startsWith("cohere.v1.")) {
             if (Cohere.Storage) Cohere.Storage.loadAll();
-            if (Cohere.Permissions) {
-                const current = Cohere.Permissions.getViewingAs();
-                if (current !== "admin" && window.Cohere.state.members) {
-                    const exists = window.Cohere.state.members.some(function (m) { return m.id === current; });
-                    if (!exists) Cohere.Permissions.setViewingAs("admin");
-                }
-            }
             renderAll();
         }
     }

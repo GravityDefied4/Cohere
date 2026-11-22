@@ -198,7 +198,9 @@ Cohere.Attendance = (function () {
     // Enables/disables the Mark All / Clear buttons, and shows a hint
     // explaining why they're disabled. No inline styling, no CSS edits.
     function updateActionButtons() {
-        const disabled = !selectedAppointmentId;
+        const selAppt = getSelectedAppointment();
+        const canMark = !selAppt || Cohere.Permissions.canMarkAttendance(selAppt);
+        const disabled = !selectedAppointmentId || !canMark;
         const markAllBtn = document.getElementById("btn-mark-all-present");
         const clearBtn = document.getElementById("btn-clear-attendance");
         const hint = document.getElementById("attendance-actions-hint");
@@ -209,7 +211,7 @@ Cohere.Attendance = (function () {
         if (hint) {
             hint.hidden = !disabled;
             if (disabled) {
-                hint.textContent = "Select a past or ongoing meeting to mark attendance.";
+                hint.textContent = !selectedAppointmentId ? "Select a past or ongoing meeting to mark attendance." : "You can only mark attendance for your own organization.";
             }
         }
     }
@@ -440,7 +442,7 @@ Cohere.Attendance = (function () {
         box.appendChild(card);
 
         // Status choices (Present / Absent / Excused), only for users who may mark attendance
-        if (Cohere.Permissions.can("markAttendance")) {
+        if (Cohere.Permissions.canMarkAttendance(getSelectedAppointment())) {
             const choices = Cohere.Utils.createEl("div", { className: "att-choices" });
             ["present", "absent", "excused"].forEach(function (status) {
                 const isActive = current === status;
@@ -612,7 +614,7 @@ Cohere.Attendance = (function () {
             Cohere.UI.showToast("Select a meeting first.", "error");
             return;
         }
-        if (!Cohere.Permissions.can("markAttendance")) {
+        if (!Cohere.Permissions.canMarkAttendance(appt)) {
             Cohere.UI.showToast(Cohere.Permissions.denyMessage("markAttendance"), "error");
             return;
         }
@@ -637,7 +639,7 @@ Cohere.Attendance = (function () {
             Cohere.UI.showToast("Select a meeting first.", "error");
             return;
         }
-        if (!Cohere.Permissions.can("markAttendance")) {
+        if (!Cohere.Permissions.canMarkAttendance(appt)) {
             Cohere.UI.showToast(Cohere.Permissions.denyMessage("markAttendance"), "error");
             return;
         }
