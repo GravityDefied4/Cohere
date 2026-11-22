@@ -160,5 +160,50 @@ Cohere.Validators = (function () {
         return { valid: Object.keys(errors).length === 0, errors: errors };
     }
 
-    return { validateOrg, validateMember, validateTask };
+    // Validates appointment form values
+    function validateAppointment(values, editingId) {
+        const errors = {};
+        const title = (values.title || "").trim();
+        const date = (values.date || "").trim();
+        const startTime = (values.startTime || "").trim();
+        const endTime = (values.endTime || "").trim();
+        const location = (values.location || "").trim();
+        const memberIds = values.memberIds || [];
+
+        if (!title || title.length < 3 || title.length > 80) {
+            errors["appt-title"] = "Meeting title is required (3–80 characters).";
+        }
+        if (!date || !Cohere.Utils.isValidISODate(date)) {
+            errors["appt-date"] = "Enter a valid date.";
+        } else {
+            let unchangedPastDate = false;
+            if (editingId) {
+                const existing = Cohere.Store.getAppointment(editingId);
+                if (existing && existing.date === date) unchangedPastDate = true;
+            }
+            if (!unchangedPastDate && date < Cohere.Utils.todayISO()) {
+                errors["appt-date"] = "Date cannot be in the past.";
+            }
+        }
+        if (!startTime) {
+            errors["appt-start"] = "Enter a start time.";
+        }
+        if (!endTime) {
+            errors["appt-end"] = "Enter an end time.";
+        } else if (startTime && endTime <= startTime) {
+            errors["appt-end"] = "End time must be after start time.";
+        }
+        if (!location || location.length < 2 || location.length > 60) {
+            errors["appt-location"] = "Enter the meeting location.";
+        }
+        if (!memberIds || memberIds.length < 2) {
+            errors["appt-members"] = "Invite at least two officers.";
+        } else {
+            const allExist = memberIds.every(function (id) { return Cohere.Store.getMember(id) !== null; });
+            if (!allExist) errors["appt-members"] = "Invite at least two officers.";
+        }
+        return { valid: Object.keys(errors).length === 0, errors: errors };
+    }
+
+    return { validateOrg, validateMember, validateTask, validateAppointment };
 })();

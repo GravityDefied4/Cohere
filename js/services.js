@@ -19,12 +19,17 @@ Cohere.Services = (function () {
         return task.completedAt <= task.deadline;
     }
 
-    // Returns the number of days between two ISO dates (to - from)
-    function daysBetween(fromISO, toISO) {
-        const a = new Date(fromISO);
-        const b = new Date(toISO);
-        return Math.round((b - a) / (1000 * 60 * 60 * 24));
+    // Returns the list of appointments that conflict with the candidate
+    function findConflicts(candidate, excludeId) {
+        return window.Cohere.state.appointments.filter(function (a) {
+            return a.id !== excludeId &&
+                a.status !== "Cancelled" &&
+                a.date === candidate.date &&
+                a.startTime < candidate.endTime &&
+                candidate.startTime < a.endTime &&
+                a.memberIds.some(function (id) { return candidate.memberIds.includes(id); });
+        });
     }
 
-    return { isOverdue, isOnTime, daysBetween };
+    return { isOverdue, isOnTime, findConflicts };
 })();
