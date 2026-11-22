@@ -1,0 +1,287 @@
+/* ==========================================================================
+   Tokens
+   ========================================================================== */
+
+/* ==========================================================================
+   Cohere — redesigned UI
+   Palette sampled from the reference: ink black, cobalt, haze blue, paper.
+   Layout follows the wireframes: dark icon rail + rounded white panel.
+   ========================================================================== */
+
+/* 1) Tokens */
+:root {
+    --ink: #060606;
+    --ink-2: #161618;
+    --cobalt: #0417a4;
+    --cobalt-2: #1634e6;
+    --haze: #afc8dc;
+    --haze-soft: #e6edf6;
+    --paper: #f0f0ee;
+    --white: #ffffff;
+
+    /* legacy names still referenced by the JS views */
+    /* theme tokens (light values). Dark values live in the [data-theme="dark"] block at the end. */
+    --text: #060606;
+    --line: #060606;
+    --line-soft: #ececE8;
+    --zebra: #f7f7f5;
+    --track: #e4e4e0;
+    --strong: #060606;
+    --on-strong: #ffffff;
+    --hover: rgba(6, 6, 6, .07);
+    --chip: #e6e6e2;
+    --chip-text: #4c4f59;
+    --accent-text: #0417a4;
+    --btn: #0417a4;
+    --btn-hover: #1634e6;
+    --gc-glow: #afc8dc;
+    --offset: #afc8dc;
+    --nav-pill: #ffffff;
+    --nav-ink: #060606;
+    color-scheme: light;
+
+    --color-primary: var(--cobalt);
+    --color-primary-dark: #030f73;
+    --color-bg: var(--paper);
+    --color-surface: var(--white);
+    --color-text: var(--text);
+    --color-muted: #666a76;
+    --color-border: #dcdcd7;
+    --color-tint: var(--haze-soft);
+    --color-success: #0f8f5f;
+    --color-warning: #c27a06;
+    --color-danger: #d2362b;
+
+    --radius: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --shadow: 0 1px 2px rgba(6, 6, 6, .06), 0 6px 18px rgba(6, 6, 6, .05);
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 16px;
+    --space-4: 24px;
+    --space-5: 32px;
+    --rail: 88px;
+    --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+/* 2) Base */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    font-family: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--ink);
+    color: var(--text);
+    line-height: 1.5;
+    font-size: 15px;
+    min-height: 100vh;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+ul,
+ol {
+    list-style: none;
+}
+
+a {
+    color: var(--accent-text);
+}
+
+h1,
+h2,
+h3 {
+    font-weight: 800;
+    letter-spacing: -.02em;
+    line-height: 1.15;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.muted,
+.text-muted {
+    color: var(--color-muted);
+}
+
+.ic {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+}
+
+:focus-visible {
+    outline: 3px solid var(--cobalt-2);
+    outline-offset: 2px;
+}
+
+/* Logos: assets/Cohere.png is the full wordmark (login), assets/Cohere2.png is the small mark (sidebar).
+   brightness(0) invert(1) renders any transparent-background logo in white for the dark/blue surfaces.
+   If your logo files are already white (or you want their original colours), delete the filter lines. */
+.logo {
+    display: block;
+}
+
+.logo-word {
+    width: 168px;
+    height: auto;
+    filter: brightness(0) invert(1);
+}
+
+.logo-mark {
+    width: 46px;
+    height: auto;
+    filter: brightness(0) invert(1);
+    margin: 4px auto 32px;
+}
+
+/* ==========================================================================
+   Gradient
+   ========================================================================== */
+
+/* 3) Gradient (signature element from the reference) */
+.gradient-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--radius-xl);
+    color: #fff;
+    background:
+        radial-gradient(135% 95% at 6% 0%, var(--cobalt) 0%, var(--cobalt-2) 32%, rgba(22, 52, 230, 0) 68%),
+        radial-gradient(90% 70% at 100% 100%, var(--gc-glow) 0%, transparent 60%),
+        var(--paper);
+}
+
+.gradient-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--grain);
+    opacity: .16;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   Login screen
+   ========================================================================== */
+
+/* 4) Login */
+#login-screen {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 32px;
+    padding: 32px;
+    background: var(--paper);
+}
+
+#login-screen .gradient-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40px;
+    min-height: calc(100vh - 64px);
+}
+
+.gc-copy {
+    max-width: 420px;
+    color: var(--text);
+}
+
+.eyebrow {
+    font-size: .75rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.gc-desc {
+    font-size: 1.05rem;
+    line-height: 1.55;
+}
+
+.login-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#login-form {
+    width: min(100%, 440px);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin: 0;
+}
+
+.title-bar {
+    font-size: 2.2rem;
+    padding-left: 16px;
+    border-left: 6px solid var(--cobalt);
+    margin-bottom: 6px;
+}
+
+.hint {
+    font-size: .8rem;
+    color: var(--color-muted);
+}
+
+.with-icon {
+    position: relative;
+}
+
+.with-icon .ic {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9a9aa2;
+    width: 20px;
+    height: 20px;
+}
+
+.with-icon input {
+    padding-left: 46px;
+}

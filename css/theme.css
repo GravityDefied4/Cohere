@@ -1,0 +1,163 @@
+/* ==========================================================================
+   Theme
+   ========================================================================== */
+
+/* theme toggle */
+.theme-toggle {
+    border: 1.5px solid var(--line);
+    background: var(--white);
+}
+
+.theme-toggle .i-sun {
+    display: none;
+}
+
+:root[data-theme="dark"] .theme-toggle .i-sun {
+    display: block;
+}
+
+:root[data-theme="dark"] .theme-toggle .i-moon {
+    display: none;
+}
+
+#login-screen {
+    position: relative;
+}
+
+.login-theme {
+    position: absolute;
+    top: 28px;
+    right: 28px;
+    z-index: 5;
+}
+
+html.theme-anim *,
+html.theme-anim *::before,
+html.theme-anim *::after {
+    transition: background-color .25s, color .25s, border-color .25s, box-shadow .25s !important;
+}
+
+/* ==========================================================================
+   Dark mode. --paper = page panel, --white = card/input surface (names kept from light theme).
+   ========================================================================== */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #121316;
+    --white: #1b1c21;
+    --text: #eceef4;
+    --line: #454856;
+    --line-soft: #2a2c34;
+    --zebra: #1f2026;
+    --track: #30323c;
+    --strong: #eceef4;
+    --on-strong: #0b0b0d;
+    --hover: rgba(255, 255, 255, .09);
+    --haze-soft: rgba(90, 120, 255, .16);
+    --haze: #3a4a7a;
+    --chip: #30323c;
+    --chip-text: #c8cbd8;
+    --accent-text: #8ea2ff;
+    --btn: #2a45ee;
+    --btn-hover: #4862ff;
+    --nav-pill: #eceef4;
+    --nav-ink: #060606;
+    --gc-glow: rgba(22, 52, 230, .55);
+    --offset: rgba(42, 69, 238, .45);
+    --color-muted: #9a9eb0;
+    --color-border: #2d2f38;
+    --color-danger: #e5483d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 6px 18px rgba(0, 0, 0, .3);
+}
+
+:root[data-theme="dark"] select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23eceef4' stroke-width='2' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>");
+}
+
+:root[data-theme="dark"] .select-pill select {
+    background-image: none;
+}
+
+:root[data-theme="dark"] .search::before {
+    filter: invert(1);
+}
+
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder {
+    color: #6f7283;
+}
+
+:root[data-theme="dark"] .with-icon .ic {
+    color: #7b7e90;
+}
+
+:root[data-theme="dark"] .badge-high,
+:root[data-theme="dark"] .badge-absent {
+    background: rgba(229, 72, 61, .22);
+    color: #ff9d94;
+}
+
+:root[data-theme="dark"] .badge-medium {
+    background: rgba(214, 140, 20, .24);
+    color: #f6c36b;
+}
+
+:root[data-theme="dark"] .badge-low,
+:root[data-theme="dark"] .badge-present,
+:root[data-theme="dark"] .badge-completed {
+    background: rgba(20, 160, 108, .24);
+    color: #6fdcab;
+}
+
+:root[data-theme="dark"] .badge-progress {
+    background: rgba(70, 100, 255, .28);
+    color: #b3c0ff;
+}
+
+:root[data-theme="dark"] .conflict-box {
+    background: rgba(229, 72, 61, .14);
+    color: #ff9d94;
+}
+
+:root[data-theme="dark"] .field-error {
+    color: #ff8a80;
+}
+
+:root[data-theme="dark"] .btn-danger,
+:root[data-theme="dark"] .btn-danger-o {
+    color: #ff8a80;
+    border-color: #ff8a80;
+}
+
+:root[data-theme="dark"] .btn-danger:hover,
+:root[data-theme="dark"] .btn-danger-o:hover {
+    color: #fff;
+}
+
+:root[data-theme="dark"] #stat-cards .card:nth-child(4) .value {
+    color: #ff8a80;
+}
+
+:root[data-theme="dark"] #panel {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05);
+}
+
+:root[data-theme="dark"] .bar-fill {
+    background: linear-gradient(90deg, #2a45ee, #7d93ff);
+}
+
+:root[data-theme="dark"] #modal-overlay {
+    background: rgba(0, 0, 0, .62);
+}
+
+:root[data-theme="dark"] .title-bar {
+    border-left-color: var(--btn);
+}
+
+:root[data-theme="dark"] .stepper li.on::before {
+    background: var(--btn);
+    border-color: var(--btn);
+}
+
+:root[data-theme="dark"] .gradient-card {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
