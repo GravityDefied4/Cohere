@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="stylesheet" href="css/theme.css">
     <link rel="stylesheet" href="css/content.css">
+    <link rel="stylesheet" href="css/dashboard.css">
 </head>
 
 <body>
@@ -104,6 +105,13 @@
             </symbol>
             <symbol id="i-undo" viewBox="0 0 24 24">
                 <path d="M4 9h10a6 6 0 010 12H9M4 9l4-4M4 9l4 4" />
+            </symbol>
+            <symbol id="i-clock" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5V12l3 2" />
+            </symbol>
+            <symbol id="i-arrow" viewBox="0 0 24 24">
+                <path d="M5 12h13M13 6l6 6-6 6" />
             </symbol>
             <symbol id="i-plus" viewBox="0 0 24 24">
                 <path d="M12 5v14M5 12h14" />
@@ -203,8 +211,6 @@
                                 <use href="#i-chev" />
                             </svg>
                         </div>
-                        <small id="viewing-as-hint">Demo profile switcher</small>
-                        <span id="header-date"></span>
                         <button type="button" id="btn-theme" class="icon-btn theme-toggle js-theme"
                             aria-label="Switch to dark mode" title="Toggle dark mode"><svg class="ic i-moon"
                                 aria-hidden="true">
@@ -232,27 +238,13 @@
 
                 <main id="main">
                     <section class="view" id="view-dashboard" hidden>
-                        <div class="dash-grid">
-                            <section class="g-tasks">
-                                <h2 class="card-title">Task Delegation</h2>
-                                <div class="card">
-                                    <div id="dash-task-status"></div>
-                                    <div id="dash-due-soon"></div>
-                                    <div id="dash-my-tasks" hidden></div>
-                                </div>
-                            </section>
-                            <section class="g-perf">
-                                <h2 class="card-title">Performance</h2>
-                                <div class="card">
-                                    <div id="dash-top-officers"></div>
-                                </div>
-                            </section>
-                            <section class="g-sched">
-                                <h2 class="card-title">Schedule</h2>
-                                <div class="card">
-                                    <div id="dash-upcoming"></div>
-                                </div>
-                            </section>
+                        <div class="dash">
+                            <section id="dash-hero" class="dash-hero" aria-label="Welcome"></section>
+                            <div class="dash-grid">
+                                <section class="dpanel g-status" id="dash-task-status"></section>
+                                <section class="dpanel g-due" id="dash-due-soon"></section>
+                                <section class="dpanel g-meet" id="dash-upcoming"></section>
+                            </div>
                         </div>
                     </section>
 

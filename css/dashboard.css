@@ -1,0 +1,517 @@
+/* ==========================================================================
+   Overview (dashboard)
+   --------------------------------------------------------------------------
+   Everything on the Overview lives here. Loaded after content.css and built
+   on its --ct-* tokens, so it follows the same palette and dark mode as the
+   other tabs.
+
+   Structure
+     Hero, then three panels: Task status, Due soon, Upcoming meetings.
+   ========================================================================== */
+
+/* 1) Local tokens ---------------------------------------------------------- */
+.dash {
+    --d-success: #0f8f5f;
+    --d-success-tint: rgba(15, 143, 95, .1);
+    --d-warn: #a8620a;
+    --d-warn-tint: rgba(194, 122, 6, .13);
+    --d-pending: #a9bfd6;
+    --d-progress: var(--ct-accent-2);
+    --d-completed: var(--d-success);
+    --d-neutral: #9aa0b4;
+
+    display: grid;
+    gap: 20px;
+}
+
+:root[data-theme="dark"] .dash {
+    --d-success: #4fd1a0;
+    --d-success-tint: rgba(79, 209, 160, .13);
+    --d-warn: #f6c36b;
+    --d-warn-tint: rgba(246, 195, 107, .13);
+    --d-pending: #5b6c93;
+    --d-neutral: #6f7388;
+}
+
+.dash .ic {
+    width: 18px;
+    height: 18px;
+}
+
+/* 2) Hero ------------------------------------------------------------------ */
+.dash-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 28px 34px;
+    border-radius: 24px;
+    color: #fff;
+    background:
+        radial-gradient(60% 130% at 100% 105%, rgba(175, 200, 220, .45) 0%, transparent 65%),
+        radial-gradient(95% 150% at 0% 0%, #1634e6 0%, #0417a4 52%, #050a3a 130%);
+}
+
+.dash-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--grain);
+    opacity: .14;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+}
+
+:root[data-theme="dark"] .dash-hero {
+    background:
+        radial-gradient(60% 130% at 100% 105%, rgba(110, 135, 255, .38) 0%, transparent 65%),
+        radial-gradient(95% 150% at 0% 0%, #2a45ee 0%, #0b1a9c 50%, #070b2c 130%);
+}
+
+.hero-eyebrow {
+    font-size: .74rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    opacity: .8;
+}
+
+.hero-title {
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -.025em;
+    line-height: 1.2;
+}
+
+.hero-title span {
+    color: #cfe0f5;
+}
+
+.hero-sub {
+    font-size: .98rem;
+    opacity: .88;
+}
+
+/* 4) Panels ---------------------------------------------------------------- */
+.dash-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "status due" "status meet";
+    gap: 20px;
+    align-items: stretch;
+}
+
+.g-status { grid-area: status; }
+.g-due { grid-area: due; }
+.g-meet { grid-area: meet; }
+
+.dpanel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-width: 0;
+    padding: 22px 24px;
+    background-color: var(--ct-surface);
+    background-image: radial-gradient(90% 130% at 100% 0%, var(--ct-haze) 0%, transparent 58%);
+    border: 1px solid var(--ct-line);
+    border-radius: var(--ct-r);
+}
+
+.dp-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dp-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    line-height: 1.25;
+    color: var(--ct-text);
+}
+
+.dp-meta {
+    display: block;
+    margin-top: 2px;
+    font-size: .78rem;
+    color: var(--ct-muted);
+}
+
+.dp-link {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: -4px -8px 0 0;
+    padding: 6px 10px;
+    border: 0;
+    border-radius: 99px;
+    background: none;
+    color: var(--ct-accent);
+    font-size: .8rem;
+    font-weight: 600;
+    transition: background .2s;
+}
+
+.dp-link .ic {
+    width: 14px;
+    height: 14px;
+    transition: transform .2s;
+}
+
+.dp-link:hover {
+    background: var(--ct-tint);
+}
+
+.dp-link:hover .ic {
+    transform: translateX(2px);
+}
+
+.dp-body {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Rows: shared by Due soon, Upcoming meetings, Organizations */
+.row-list {
+    display: grid;
+    gap: 10px;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--ct-line-soft);
+    border-radius: 12px;
+    transition: background .2s, border-color .2s;
+}
+
+.row:hover {
+    background: var(--ct-surface-2);
+    border-color: var(--ct-line);
+}
+
+.row-info {
+    min-width: 0;
+}
+
+.row-info strong {
+    display: block;
+    font-size: .92rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.muted-line {
+    display: block;
+    margin-top: 1px;
+    font-size: .78rem;
+    color: var(--ct-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.row-side {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.avatar-sm {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--ct-tint);
+    color: var(--ct-accent);
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 99px;
+    border: 1px solid var(--ct-line-soft);
+    background: var(--ct-surface-2);
+    color: var(--ct-muted);
+    font-size: .72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.chip-warn {
+    background: var(--d-warn-tint);
+    border-color: transparent;
+    color: var(--d-warn);
+}
+
+.chip-danger {
+    background: var(--ct-danger-tint);
+    border-color: transparent;
+    color: var(--ct-danger);
+}
+
+.meter {
+    height: 6px;
+    margin-top: 8px;
+    border-radius: 99px;
+    background: var(--ct-track);
+    overflow: hidden;
+}
+
+.meter span {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--ct-accent), var(--ct-accent-2));
+    transition: width .5s;
+}
+
+/* Empty state */
+.dp-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 30px 12px;
+    text-align: center;
+    font-size: .84rem;
+    color: var(--ct-muted);
+}
+
+.dp-empty strong {
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--ct-text);
+}
+
+.dp-empty-ic {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    margin-bottom: 6px;
+    border-radius: 50%;
+    background: var(--ct-tint);
+    color: var(--ct-accent);
+}
+
+.dp-empty-ic .ic {
+    width: 22px;
+    height: 22px;
+}
+
+/* 5) Panel contents -------------------------------------------------------- */
+
+/* Task status: donut + legend */
+.s-pending {
+    --c: var(--d-pending);
+}
+
+.s-progress {
+    --c: var(--d-progress);
+}
+
+.s-completed {
+    --c: var(--d-completed);
+}
+
+.status-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 32px;
+    height: 100%;
+}
+
+.donut {
+    position: relative;
+    align-self: center;
+    width: 180px;
+    height: 180px;
+}
+
+.donut svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.donut circle {
+    fill: none;
+    stroke-width: 14;
+}
+
+.donut-track {
+    stroke: var(--ct-track);
+}
+
+.donut-arc {
+    stroke: var(--c);
+}
+
+.donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.donut-center strong {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -.03em;
+    line-height: 1.1;
+}
+
+.donut-center span {
+    font-size: .74rem;
+    color: var(--ct-muted);
+}
+
+.status-legend {
+    display: grid;
+    gap: 18px;
+}
+
+.status-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.status-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: .88rem;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--c);
+}
+
+.status-nums {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.status-nums strong {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.status-nums span {
+    min-width: 36px;
+    text-align: right;
+    font-size: .8rem;
+    color: var(--ct-muted);
+}
+
+.status-row .meter span {
+    background: var(--c);
+}
+
+/* Upcoming meetings */
+.date-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 52px;
+    border-radius: 12px;
+    background: var(--ct-tint);
+    border: 1px solid var(--ct-tint-line);
+    color: var(--ct-accent);
+}
+
+.date-tile small {
+    font-size: .64rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.date-tile strong {
+    margin-top: 3px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.date-tile.is-today {
+    background: var(--ct-btn);
+    border-color: var(--ct-btn);
+    color: #fff;
+}
+
+.people {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--ct-muted);
+}
+
+.people .ic {
+    width: 16px;
+    height: 16px;
+}
+
+/* 6) Responsive ------------------------------------------------------------ */
+@media (max-width: 1000px) {
+    .dash-grid {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "status" "due" "meet";
+    }
+}
+
+@media (max-width: 640px) {
+    .dash-hero {
+        padding: 22px 20px;
+    }
+
+    .dpanel {
+        padding: 18px;
+    }
+
+    .row {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .row-side {
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+}

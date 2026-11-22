@@ -10,10 +10,6 @@
         display: none;
     }
 
-    .dash-grid {
-        grid-template-columns: 1fr;
-        grid-template-areas: "tasks" "perf" "sched";
-    }
 }
 
 @media (max-width: 900px) {

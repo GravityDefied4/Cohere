@@ -90,16 +90,11 @@
 #main .section-head h2,
 #main .card-title,
 #main .panel-head h2,
-#main .dash-grid .card-title,
 #modal-title {
     font-size: 1.2rem;
     font-weight: 600;
     letter-spacing: -.01em;
     margin: 0;
-}
-
-#main .dash-grid .card-title {
-    margin: 0 0 12px;
 }
 
 #main .split-main .card-title {
@@ -148,8 +143,7 @@
 }
 
 /* The one gradient on surfaces: a faint haze in the top-right corner of the
-   large panels (Overview cards, Settings, forms, performance detail). */
-#main .dash-grid .card,
+   large panels (Settings, forms, performance detail; the Overview has its own in dashboard.css). */
 #main #view-settings .card,
 #main .form-panel,
 #main #perf-detail:not(:empty) {
@@ -185,41 +179,8 @@
     border-radius: 12px;
 }
 
-/* 4) Overview: all three cards use the same surface ------------------------ */
-#main .dash-grid {
-    gap: 24px 28px;
-}
-
-#main .dash-grid .card,
-#main .g-tasks .card,
-#main .g-perf .card,
-#main .g-sched .card {
-    --text: var(--ct-text);
-    --line-soft: var(--ct-line-soft);
-    --color-muted: var(--ct-muted);
-    --track: var(--ct-track);
-    --row-line: var(--ct-line);
-    color: var(--ct-text);
-    background-color: var(--ct-surface);
-    border: 1px solid var(--ct-line);
-    border-radius: var(--ct-r);
-    padding: 22px;
-}
-
-#main .dash-grid li {
-    padding: 10px 14px !important;
-    border: 1px solid var(--ct-line) !important;
-    border-radius: 12px;
-    background: transparent;
-}
-
-#main .dash-grid .card h3 {
-    margin: 0 0 10px;
-}
-
 /* 5) Progress bars: thin track, gradient fill ------------------------------ */
 #main .bar,
-#main .dash-grid .bar,
 #main #perf-detail .bar {
     height: 6px;
     border: 0;
@@ -579,7 +540,6 @@
 @media (max-width: 600px) {
 
     #main .card,
-    #main .dash-grid .card,
     #main .form-panel,
     #main #perf-detail:not(:empty) {
         padding: 18px;
