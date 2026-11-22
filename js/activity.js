@@ -159,7 +159,7 @@ Cohere.Notify = (function () {
             li.style.padding = "8px";
             li.style.borderBottom = "1px solid var(--color-border)";
             if (!n.read) {
-                li.style.background = "#eff6ff";
+                li.style.background = "var(--color-tint)";
                 li.style.fontWeight = "500";
             }
 

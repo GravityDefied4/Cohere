@@ -47,6 +47,9 @@ Cohere.App = (function () {
             Cohere.Services.generateDeadlineReminders();
         }
 
+        // 5.5) Layout chrome (login gate, form panels, stepper)
+        if (Cohere.Layout) Cohere.Layout.init();
+
         // 6) Render all
         renderAll();
 
@@ -72,7 +75,7 @@ Cohere.App = (function () {
                 const btn = e.target.closest(".nav-btn");
                 if (btn && btn.dataset.view) {
                     showView(btn.dataset.view);
-                    if (window.innerWidth < 900) {
+                    if (window.innerWidth <= 900) {
                         sidebar.classList.remove("sidebar-open");
                     }
                 }
@@ -100,6 +103,8 @@ Cohere.App = (function () {
         document.querySelectorAll(".nav-btn").forEach(function (b) { b.classList.remove("active"); });
         const activeBtn = document.querySelector(`.nav-btn[data-view="${name}"]`);
         if (activeBtn) activeBtn.classList.add("active");
+
+        if (Cohere.Layout) Cohere.Layout.onView(name);
     }
 
     // Renders all views and UI components
@@ -114,6 +119,7 @@ Cohere.App = (function () {
         if (Cohere.Notify && Cohere.Notify.renderPanel) Cohere.Notify.renderPanel();
 
         if (Cohere.UI) Cohere.UI.applyPermissions();
+        if (Cohere.Layout) Cohere.Layout.refresh();
     }
 
     // Handles storage changes from other tabs
