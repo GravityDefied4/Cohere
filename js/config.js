@@ -42,6 +42,7 @@ Cohere.Config = (function () {
         viewSettings: "open settings",
         manageOrgs: "create or manage organizations",
         assignPresident: "assign a president",
+        editOrgPicture: "change the organization picture",
         manageMembers: "manage members",
         manageTasks: "manage tasks",
         manageMeetings: "manage meetings",

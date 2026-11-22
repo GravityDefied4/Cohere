@@ -77,6 +77,23 @@
                 <rect x="5" y="10.5" width="14" height="10" rx="2.5" />
                 <path d="M8 10.5V8a4 4 0 118 0v2.5" />
             </symbol>
+            <symbol id="i-more" viewBox="0 0 24 24">
+                <circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+            </symbol>
+            <symbol id="i-edit" viewBox="0 0 24 24">
+                <path d="M4 20h4L19 9a2.1 2.1 0 00-3-3L5 17z" />
+                <path d="M14.5 7.5l3 3" />
+            </symbol>
+            <symbol id="i-trash" viewBox="0 0 24 24">
+                <path d="M4 7h16M10 11v6M14 11v6" />
+                <path d="M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2" />
+            </symbol>
+            <symbol id="i-userplus" viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5" />
+                <path d="M2.5 20a6.5 6.5 0 0113 0M18 8v6M15 11h6" />
+            </symbol>
             <symbol id="i-chev" viewBox="0 0 24 24">
                 <path d="M6 9l6 6 6-6" />
             </symbol>
@@ -262,7 +279,7 @@
                         <div class="org-picker" id="org-picker">
                             <button type="button" class="org-picker-btn" id="org-picker-btn" aria-expanded="false"
                                 aria-controls="org-picker-list">
-                                <span class="org-orb" aria-hidden="true"></span>
+                                <span class="org-orb" id="org-picker-orb" aria-hidden="true"></span>
                                 <span class="org-picker-text"><strong id="org-picker-name">No organization</strong><span
                                         id="org-picker-desc"></span></span>
                                 <svg class="ic chev" aria-hidden="true">
@@ -272,33 +289,49 @@
                             <ul class="org-picker-list" id="org-picker-list" hidden></ul>
                         </div>
 
-                        <!-- Admin only: create organizations and assign presidents -->
-                        <div data-permission="manageOrgs">
-                            <div class="section-head">
-                                <h2>Organizations</h2><button type="button" class="btn" data-open="org-panel"><svg
-                                        class="ic" aria-hidden="true">
-                                        <use href="#i-plus" />
-                                    </svg>Add organization</button>
+                        <!-- Options (Admin: everything; President: edit logo) -->
+                        <div class="org-bar" id="org-detail" hidden></div>
+
+                        <!-- Add / edit organization (Admin: all fields; President: logo only) -->
+                        <section class="form-panel" id="org-panel" hidden>
+                            <div class="panel-head">
+                                <h2 id="org-panel-title">Add organization</h2><button type="button"
+                                    class="icon-btn panel-close" aria-label="Close form"><svg class="ic"
+                                        aria-hidden="true">
+                                        <use href="#i-x" />
+                                    </svg></button>
                             </div>
-                            <section class="form-panel" id="org-panel" hidden>
-                                <div class="panel-head">
-                                    <h2>Organization details</h2><button type="button" class="icon-btn panel-close"
-                                        aria-label="Close form"><svg class="ic" aria-hidden="true">
-                                            <use href="#i-x" />
-                                        </svg></button>
+                            <form id="org-form" novalidate>
+                                <input type="hidden" id="org-id">
+                                <div class="field org-logo-field">
+                                    <label for="org-logo-upload">Organization logo</label>
+                                    <div class="org-logo-row">
+                                        <span class="org-orb org-orb-lg" id="org-logo-preview" aria-hidden="true"></span>
+                                        <div class="org-logo-actions">
+                                            <button type="button" class="btn btn-secondary btn-sm"
+                                                id="org-logo-upload">Upload logo</button>
+                                            <button type="button" class="btn btn-danger-o btn-sm" id="org-logo-remove"
+                                                hidden>Remove</button>
+                                            <small>PNG, JPG, WebP or GIF. It is cropped to a square.</small>
+                                        </div>
+                                        <input type="file" id="org-logo-input"
+                                            accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                                    </div>
                                 </div>
-                                <form id="org-form" novalidate>
-                                    <input type="hidden" id="org-id">
-                                    <div class="field "><label for="org-name">Organization name</label><input
-                                            type="text" id="org-name"></div>
-                                    <div class="field "><label for="org-desc">Description</label><textarea
-                                            id="org-desc"></textarea></div>
-                                    <div class="actions"><button type="submit" id="org-submit" class="btn">Add
-                                            Organization</button><button type="button" id="org-cancel"
-                                            class="btn btn-secondary" hidden>Cancel</button></div>
-                                </form>
-                            </section>
-                            <div id="org-detail" class="org-detail"></div>
+                                <div class="field "><label for="org-name">Organization name</label><input
+                                        type="text" id="org-name"></div>
+                                <div class="field "><label for="org-desc">Description</label><textarea
+                                        id="org-desc"></textarea></div>
+                                <p class="hint" id="org-lock-hint" hidden>Only the Admin can change the name and
+                                    description. You can update the logo.</p>
+                                <div class="actions"><button type="submit" id="org-submit" class="btn">Add
+                                        Organization</button><button type="button" id="org-cancel"
+                                        class="btn btn-secondary" hidden>Cancel</button></div>
+                            </form>
+                        </section>
+
+                        <!-- Admin only: assign presidents -->
+                        <div data-permission="manageOrgs">
                             <section class="form-panel" id="president-panel" hidden>
                                 <div class="panel-head">
                                     <h2 id="president-title">Assign president</h2><button type="button"
@@ -369,7 +402,7 @@
                                         <th>Role</th>
                                         <th>Office / Committee</th>
                                         <th>Status</th>
-                                        <th>Actions</th>
+                                        <th class="col-actions"><span class="sr-only">Actions</span></th>
                                     </tr>
                                 </thead>
                                 <tbody id="member-table-body"></tbody>

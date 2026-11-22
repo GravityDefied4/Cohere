@@ -118,3 +118,180 @@
         height: 40px;
     }
 }
+
+/* Organization logo on the orb */
+.org-orb.has-picture {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 1px solid var(--ct-line, var(--line));
+}
+
+.org-orb-lg {
+    width: 72px;
+    height: 72px;
+}
+
+/* Options bar: president summary on the left, Options menu on the right */
+.org-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 0 0 22px;
+}
+
+.org-bar[hidden] {
+    display: none;
+}
+
+.org-bar .org-detail-line {
+    margin: 0;
+    font-size: .9rem;
+}
+
+/* "..." action button + floating menu (organization bar and member rows) */
+.kebab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ct-muted, var(--color-muted));
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+}
+
+.kebab-btn .ic {
+    width: 20px;
+    height: 20px;
+}
+
+.kebab-btn:hover,
+.kebab-btn[aria-expanded="true"] {
+    background: var(--ct-surface-2, var(--hover));
+    color: var(--ct-text, var(--text));
+    border-color: var(--ct-line, var(--line));
+}
+
+.kebab-btn:focus-visible,
+.action-menu-item:focus-visible {
+    outline: 2px solid var(--ct-accent-2, var(--cobalt-2));
+    outline-offset: 1px;
+}
+
+.org-bar .kebab-btn {
+    margin-left: auto;
+    border-color: var(--ct-line, var(--line));
+}
+
+.col-actions {
+    width: 64px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.action-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 200px;
+    padding: 6px;
+    background: var(--ct-surface, var(--white));
+    border: 1px solid var(--ct-line, var(--line));
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(6, 6, 6, .14);
+}
+
+.action-menu[hidden] {
+    display: none;
+}
+
+.action-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ct-text, var(--text));
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+.action-menu-item .ic {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--ct-muted, var(--color-muted));
+}
+
+.action-menu-item:hover,
+.action-menu-item:focus-visible {
+    background: var(--ct-surface-2, var(--hover));
+}
+
+.action-menu-item.is-danger,
+.action-menu-item.is-danger .ic {
+    color: var(--ct-danger, var(--color-danger));
+}
+
+.action-menu-item.is-danger:hover {
+    background: var(--ct-danger-tint, var(--hover));
+}
+
+.action-menu-sep {
+    height: 1px;
+    margin: 4px 2px;
+    background: var(--ct-line-soft, var(--line-soft));
+}
+
+:root[data-theme="dark"] .action-menu {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .55);
+}
+
+/* Logo field inside the organization form */
+.org-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.org-logo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.org-logo-actions small {
+    flex-basis: 100%;
+    color: var(--ct-muted, var(--color-muted));
+    font-size: .78rem;
+}
+
+#org-form input:disabled,
+#org-form textarea:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .org-orb-lg {
+        width: 56px;
+        height: 56px;
+    }
+
+    .org-bar {
+        align-items: stretch;
+    }
+}

@@ -58,6 +58,27 @@ Cohere.Store = (function () {
         return { ok: true, data: org };
     }
 
+    // Sets (data URL) or clears (null) the logo of an organization.
+    // Allowed for the Admin and for the President of that organization only.
+    const PICTURE_PATTERN = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+    const MAX_PICTURE_CHARS = 300000;
+    function setOrgPicture(id, dataUrl) {
+        const org = getOrg(id);
+        if (!org) return { ok: false, error: "Organization not found." };
+        if (!Cohere.Permissions.canEditOrgPicture(id)) {
+            return { ok: false, error: "Only the Admin or this organization's President can change its logo." };
+        }
+        if (dataUrl) {
+            if (!PICTURE_PATTERN.test(dataUrl)) return { ok: false, error: "That image format is not supported." };
+            if (dataUrl.length > MAX_PICTURE_CHARS) return { ok: false, error: "That image is too large. Try a smaller one." };
+            org.picture = dataUrl;
+        } else {
+            delete org.picture;
+        }
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("organization", (dataUrl ? "Changed" : "Removed") + " the logo of organization \"" + org.name + "\"");
+        return { ok: true, data: org };
+    }
     function deleteOrg(id) {
         if (!Cohere.Permissions.can("manageOrgs")) return { ok: false, error: Cohere.Permissions.denyMessage("manageOrgs") };
         const org = getOrg(id);
@@ -417,7 +438,7 @@ Cohere.Store = (function () {
 
     return {
         getOrg, getMember, getMemberName, getTask, getAppointment, taskOrgId, apptOrgId, visibleTasks,
-        addOrg, updateOrg, deleteOrg, getPresident, assignPresident,
+        addOrg, updateOrg, setOrgPicture, deleteOrg, getPresident, assignPresident,
         addMember, updateMember, deleteMember, setMemberStatus,
         addTask, updateTask, deleteTask, setTaskStatus,
         addAppointment, updateAppointment, cancelAppointment, deleteAppointment,

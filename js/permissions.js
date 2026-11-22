@@ -86,6 +86,14 @@ Cohere.Permissions = (function () {
         return actor.isAdmin || (!!orgId && actor.orgId === orgId);
     }
 
+    // Organization picture: the Admin (any organization) or the President of that organization.
+    function canEditOrgPicture(orgId) {
+        if (!orgId) return false;
+        const actor = getActor();
+        if (actor.isAdmin) return true;
+        return actor.role === "President" && actor.orgId === orgId;
+    }
+
     // Presidents cannot edit or remove the President (only the Admin can).
     function canManageMember(member) {
         if (!member || !canManageOrgMembers(member.orgId)) return false;
@@ -98,5 +106,5 @@ Cohere.Permissions = (function () {
         return "Signed in as " + actor.name + " (" + (actor.role || "Guest") + "): you do not have permission to " + label + ".";
     }
 
-    return { init, signIn, signOut, isSignedIn, renderUser, getActor, can, canManageOrgData, canUpdateTask, canManageMeeting, canMarkAttendance, canManageOrgMembers, canManageMember, denyMessage };
+    return { init, signIn, signOut, isSignedIn, renderUser, getActor, can, canManageOrgData, canUpdateTask, canManageMeeting, canMarkAttendance, canManageOrgMembers, canEditOrgPicture, canManageMember, denyMessage };
 })();

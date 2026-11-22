@@ -20,6 +20,7 @@
 #modal-overlay,
 #toast-container,
 #notif-panel,
+#action-menu,
 #logout-overlay {
     --ct-surface: #ffffff;
     --ct-surface-2: #f6f7fa;
@@ -70,6 +71,7 @@
 :root[data-theme="dark"] #modal-overlay,
 :root[data-theme="dark"] #toast-container,
 :root[data-theme="dark"] #notif-panel,
+:root[data-theme="dark"] #action-menu,
 :root[data-theme="dark"] #logout-overlay {
     --ct-surface: #181a20;
     --ct-surface-2: #1e2028;

@@ -42,15 +42,25 @@ Cohere.Members = (function () {
             if (!e.target.closest("#org-picker")) togglePicker(false);
         });
 
+        // Organization logo field inside the add / edit form
+        $("org-logo-upload").addEventListener("click", function () { $("org-logo-input").click(); });
+        $("org-logo-input").addEventListener("change", handleLogoChosen);
+        $("org-logo-remove").addEventListener("click", function () { pendingLogo = null; renderLogoField(); });
+
+        // "..." action menu (organization + member rows): close on outside click / Escape / scroll / resize
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest("#action-menu") && !e.target.closest(".kebab-btn")) closeActionMenu(false);
+        });
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeActionMenu(true); });
+        window.addEventListener("resize", function () { closeActionMenu(false); });
+        window.addEventListener("scroll", function () { closeActionMenu(false); }, true);
+
         // Organization form (Admin)
         $("org-form").addEventListener("submit", handleOrgSubmit);
         $("org-cancel").addEventListener("click", resetOrgForm);
         $("org-detail").addEventListener("click", function (e) {
-            const btn = e.target.closest("[data-action]");
-            if (!btn) return;
-            if (btn.dataset.action === "edit") startEditOrg(btn.dataset.id);
-            else if (btn.dataset.action === "delete") handleOrgDelete(btn.dataset.id);
-            else if (btn.dataset.action === "assign") openPresidentForm();
+            const btn = e.target.closest(".kebab-btn");
+            if (btn) openActionMenu(btn, orgMenuItems());
         });
         $("president-form").addEventListener("submit", handlePresidentSubmit);
 
@@ -62,12 +72,8 @@ Cohere.Members = (function () {
         $("member-filter-office").addEventListener("change", renderMemberTable);
         $("member-filter-status").addEventListener("change", renderMemberTable);
         $("member-table-body").addEventListener("click", function (e) {
-            const btn = e.target.closest("[data-action]");
-            if (!btn) return;
-            const id = btn.dataset.id;
-            if (btn.dataset.action === "edit") startEditMember(id);
-            else if (btn.dataset.action === "delete") handleMemberDelete(id);
-            else if (btn.dataset.action === "toggle") handleToggleStatus(id);
+            const btn = e.target.closest(".kebab-btn");
+            if (btn) openActionMenu(btn, memberMenuItems(btn.dataset.id));
         });
     }
 
@@ -101,12 +107,15 @@ Cohere.Members = (function () {
         $("org-picker-desc").textContent = org ? (org.description || "No description") :
             (Cohere.Permissions.can("manageOrgs") ? "Use “Add organization” to create one." : "You are not assigned to an organization yet.");
         $("org-picker").classList.toggle("single", orgs.length < 2);
+        applyOrb($("org-picker-orb"), org);
 
         const list = $("org-picker-list");
         Cohere.Utils.clearEl(list);
         orgs.forEach(function (o) {
             const li = el("li", { dataset: { org: o.id }, tabindex: "0", className: o.id === selectedOrgId ? "is-selected" : "" });
-            li.appendChild(el("span", { className: "org-orb", "aria-hidden": "true" }));
+            const orb = el("span", { className: "org-orb", "aria-hidden": "true" });
+            applyOrb(orb, o);
+            li.appendChild(orb);
             li.appendChild(el("span", { className: "org-picker-text" }, [
                 el("strong", { textContent: o.name }),
                 el("span", { textContent: o.description || "No description" })
@@ -118,26 +127,225 @@ Cohere.Members = (function () {
         $("org-picker").classList.remove("open");
     }
 
-    // ---- Admin: details of the selected organization -----------------------
+    // ---- Organization logo --------------------------------------------------
+    const SAFE_PICTURE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+    const PICTURE_SIZE = 256;            // saved as a 256 x 256 square
+    const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+    // Logo chosen in the open form but not saved yet: undefined = unchanged, null = remove, string = new image
+    let pendingLogo;
+
+    // Shows the organization's logo on an orb, or the default gradient orb
+    function applyOrb(node, org) {
+        if (!node) return;
+        const pic = org && typeof org.picture === "string" && SAFE_PICTURE.test(org.picture) ? org.picture : "";
+        node.classList.toggle("has-picture", !!pic);
+        node.style.backgroundImage = pic ? 'url("' + pic + '")' : "";
+    }
+
+    // Logo preview + buttons inside the add / edit form
+    function renderLogoField() {
+        const editingId = $("org-id").value;
+        const org = editingId ? Cohere.Store.getOrg(editingId) : null;
+        const current = pendingLogo !== undefined ? pendingLogo : (org ? org.picture : null);
+        applyOrb($("org-logo-preview"), current ? { picture: current } : null);
+        $("org-logo-upload").textContent = current ? "Change logo" : "Upload logo";
+        $("org-logo-remove").hidden = !current;
+    }
+
+    // Reads an image file, crops it to a centred square and shrinks it
+    function pictureFromFile(file, done) {
+        const reader = new FileReader();
+        reader.onerror = function () { done("Could not read that file."); };
+        reader.onload = function () {
+            const img = new Image();
+            img.onerror = function () { done("That file is not a valid image."); };
+            img.onload = function () {
+                const side = Math.min(img.naturalWidth, img.naturalHeight);
+                if (!side) { done("That file is not a valid image."); return; }
+                const canvas = document.createElement("canvas");
+                canvas.width = PICTURE_SIZE;
+                canvas.height = PICTURE_SIZE;
+                const ctx = canvas.getContext("2d");
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, PICTURE_SIZE, PICTURE_SIZE);
+                const sx = (img.naturalWidth - side) / 2;
+                const sy = (img.naturalHeight - side) / 2;
+                ctx.drawImage(img, sx, sy, side, side, 0, 0, PICTURE_SIZE, PICTURE_SIZE);
+                done(null, canvas.toDataURL("image/jpeg", 0.85));
+            };
+            img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleLogoChosen(e) {
+        const input = e.target;
+        const file = input.files && input.files[0];
+        input.value = "";
+        if (!file) return;
+        const editingId = $("org-id").value;
+        const allowed = editingId ? Cohere.Permissions.canEditOrgPicture(editingId) : Cohere.Permissions.can("manageOrgs");
+        if (!allowed) {
+            Cohere.UI.showToast("Only the Admin or this organization's President can change its logo.", "error");
+            return;
+        }
+        if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
+            Cohere.UI.showToast("Choose a PNG, JPG, WebP or GIF image.", "error");
+            return;
+        }
+        if (file.size > MAX_UPLOAD_BYTES) {
+            Cohere.UI.showToast("That image is larger than 8 MB. Choose a smaller one.", "error");
+            return;
+        }
+        pictureFromFile(file, function (err, dataUrl) {
+            if (err) { Cohere.UI.showToast(err, "error"); return; }
+            pendingLogo = dataUrl;
+            renderLogoField();
+        });
+    }
+
+    // ---- "..." action menu (shared by the organization bar and every member row) ----
+    // One floating menu lives on <body> so the table's horizontal scroll can never clip it.
+    let menuAnchor = null;
+    let menuItems = [];
+
+    function getActionMenu() {
+        let menu = $("action-menu");
+        if (menu) return menu;
+        menu = el("div", { id: "action-menu", className: "action-menu", role: "menu", hidden: "" });
+        document.body.appendChild(menu);
+        menu.addEventListener("click", function (e) {
+            const btn = e.target.closest("[data-i]");
+            if (!btn) return;
+            const item = menuItems[Number(btn.dataset.i)];
+            closeActionMenu(true);
+            if (item && item.run) item.run();
+        });
+        menu.addEventListener("keydown", function (e) {
+            const keys = ["ArrowDown", "ArrowUp", "Home", "End"];
+            if (keys.indexOf(e.key) === -1) return;
+            e.preventDefault();
+            const btns = Array.prototype.slice.call(menu.querySelectorAll(".action-menu-item"));
+            if (!btns.length) return;
+            const at = btns.indexOf(document.activeElement);
+            let next = e.key === "Home" ? 0 : e.key === "End" ? btns.length - 1 :
+                e.key === "ArrowDown" ? (at + 1) % btns.length : (at - 1 + btns.length) % btns.length;
+            btns[next].focus();
+        });
+        return menu;
+    }
+
+    function openActionMenu(anchor, items) {
+        const menu = getActionMenu();
+        const sameButton = menuAnchor === anchor && !menu.hidden;
+        closeActionMenu(false);
+        if (sameButton || !items.length) return;
+
+        menuItems = items;
+        menuAnchor = anchor;
+        Cohere.Utils.clearEl(menu);
+        items.forEach(function (it, i) {
+            if (it.sep) { menu.appendChild(el("div", { className: "action-menu-sep", role: "separator" })); return; }
+            menu.appendChild(el("button", {
+                type: "button", role: "menuitem",
+                className: "action-menu-item" + (it.danger ? " is-danger" : ""),
+                dataset: { i: String(i) }
+            }, [Cohere.UI.icon(it.icon), el("span", { textContent: it.label })]));
+        });
+
+        // Place under the button, right edges aligned; flip above when there is no room below
+        menu.style.visibility = "hidden";
+        menu.hidden = false;
+        const r = anchor.getBoundingClientRect();
+        const w = menu.offsetWidth, h = menu.offsetHeight;
+        const left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8));
+        let top = r.bottom + 6;
+        if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+        menu.style.visibility = "";
+
+        anchor.setAttribute("aria-expanded", "true");
+        const first = menu.querySelector(".action-menu-item");
+        if (first) first.focus({ preventScroll: true });
+    }
+
+    function closeActionMenu(returnFocus) {
+        const menu = $("action-menu");
+        if (!menu || menu.hidden) return;
+        menu.hidden = true;
+        if (menuAnchor) {
+            menuAnchor.setAttribute("aria-expanded", "false");
+            if (returnFocus && document.body.contains(menuAnchor)) menuAnchor.focus({ preventScroll: true });
+        }
+        menuAnchor = null;
+    }
+
+    function kebabButton(label, props) {
+        return el("button", Object.assign({
+            type: "button", className: "kebab-btn", "aria-label": label,
+            "aria-haspopup": "menu", "aria-expanded": "false"
+        }, props || {}), [Cohere.UI.icon("more")]);
+    }
+
+    // Actions for the selected organization. Admin: everything. President: edit logo only.
+    function orgMenuItems() {
+        const org = selectedOrg();
+        const isAdmin = Cohere.Permissions.can("manageOrgs");
+        const pres = org ? Cohere.Store.getPresident(org.id) : null;
+        const items = [];
+        if (org && Cohere.Permissions.canEditOrgPicture(org.id)) {
+            items.push({ label: "Edit organization", icon: "edit", run: function () { Cohere.Layout.openPanel("org-panel"); startEditOrg(org.id); } });
+        }
+        if (org && isAdmin) {
+            items.push({ label: pres ? "Change president" : "Assign president", icon: "userplus", run: openPresidentForm });
+        }
+        if (isAdmin) {
+            items.push({ label: "Add organization", icon: "plus", run: function () { resetOrgForm(); Cohere.Layout.openPanel("org-panel"); } });
+        }
+        if (org && isAdmin) {
+            items.push({ sep: true });
+            items.push({ label: "Delete organization", icon: "trash", danger: true, run: function () { handleOrgDelete(org.id); } });
+        }
+        return items;
+    }
+
+    // Actions for one member row
+    function memberMenuItems(id) {
+        const member = Cohere.Store.getMember(id);
+        if (!member || !Cohere.Permissions.canManageMember(member)) return [];
+        const active = (member.status || "Active") === "Active";
+        return [
+            { label: "Edit member", icon: "edit", run: function () { Cohere.Layout.openPanel("member-panel"); startEditMember(id); } },
+            { label: active ? "Deactivate" : "Activate", icon: active ? "cross" : "check", run: function () { handleToggleStatus(id); } },
+            { sep: true },
+            { label: "Delete member", icon: "trash", danger: true, run: function () { handleMemberDelete(id); } }
+        ];
+    }
+
+    // Organization bar: president summary on the left, one "..." button on the right
     function renderOrgDetail() {
         const box = $("org-detail");
         if (!box) return;
+        closeActionMenu(false);
         Cohere.Utils.clearEl(box);
         const org = selectedOrg();
-        if (!org || !Cohere.Permissions.can("manageOrgs")) return;
+        const isAdmin = Cohere.Permissions.can("manageOrgs");
+        const pres = org ? Cohere.Store.getPresident(org.id) : null;
 
-        const pres = Cohere.Store.getPresident(org.id);
-        const count = window.Cohere.state.members.filter(function (m) { return m.orgId === org.id; }).length;
-        box.appendChild(el("p", { className: "org-detail-line" }, [
-            el("strong", { textContent: "President: " }),
-            pres ? pres.fullName + " (" + pres.studentId + ")" : "Not assigned yet",
-            " · " + count + " member" + (count !== 1 ? "s" : "")
-        ]));
-        const actions = el("div", { className: "actions wrap" });
-        actions.appendChild(el("button", { type: "button", className: "btn", textContent: pres ? "Change president" : "Assign president", dataset: { action: "assign", id: org.id } }));
-        actions.appendChild(el("button", { type: "button", className: "btn btn-secondary", textContent: "Edit organization", dataset: { action: "edit", id: org.id } }));
-        actions.appendChild(el("button", { type: "button", className: "btn btn-danger-o", textContent: "Delete organization", dataset: { action: "delete", id: org.id } }));
-        box.appendChild(actions);
+        const hasActions = orgMenuItems().length > 0;
+        box.hidden = !hasActions;
+        if (!hasActions) return;
+
+        if (org && isAdmin) {
+            const count = window.Cohere.state.members.filter(function (m) { return m.orgId === org.id; }).length;
+            box.appendChild(el("p", { className: "org-detail-line" }, [
+                el("strong", { textContent: "President: " }),
+                pres ? pres.fullName + " (" + pres.studentId + ")" : "Not assigned yet",
+                " · " + count + " member" + (count !== 1 ? "s" : "")
+            ]));
+        }
+        box.appendChild(kebabButton("Organization actions", { id: "org-menu-btn" }));
     }
 
     function openPresidentForm() {
@@ -171,20 +379,41 @@ Cohere.Members = (function () {
         Cohere.App.renderAll();
     }
 
-    // ---- Organization form (Admin) -----------------------------------------
+    // ---- Organization form (Admin: all fields. President: logo only) -------
     function handleOrgSubmit(e) {
         e.preventDefault();
         const form = e.target;
         const editingId = $("org-id").value;
-        const values = { name: $("org-name").value, description: $("org-desc").value };
+        const isAdmin = Cohere.Permissions.can("manageOrgs");
         Cohere.UI.clearFieldErrors(form);
 
+        // President: only the logo can change
+        if (editingId && !isAdmin) {
+            if (pendingLogo === undefined) {
+                Cohere.UI.showToast("Choose a new logo or remove the current one first.", "info");
+                return;
+            }
+            const r = Cohere.Store.setOrgPicture(editingId, pendingLogo);
+            if (!r.ok) { Cohere.UI.showToast(r.error, "error"); return; }
+            Cohere.UI.showToast(pendingLogo ? "Organization logo updated." : "Organization logo removed.", "success");
+            resetOrgForm();
+            Cohere.App.renderAll();
+            return;
+        }
+
+        const values = { name: $("org-name").value, description: $("org-desc").value };
         const validation = Cohere.Validators.validateOrg(values, editingId || null);
         if (!validation.valid) { Cohere.UI.showFieldErrors(form, validation.errors); return; }
 
         const result = editingId ? Cohere.Store.updateOrg(editingId, values) : Cohere.Store.addOrg(values);
         if (!result.ok) { Cohere.UI.showToast(result.error, "error"); return; }
         if (!editingId) selectedOrgId = result.data.id;
+
+        // Save the logo chosen in the form (a new organization only needs it when one was picked)
+        if (pendingLogo !== undefined && (editingId || pendingLogo)) {
+            const pr = Cohere.Store.setOrgPicture(result.data.id, pendingLogo);
+            if (!pr.ok) Cohere.UI.showToast(pr.error, "error");
+        }
         Cohere.UI.showToast(editingId ? "Organization updated." : "Organization added. Now assign its president.", "success");
         resetOrgForm();
         Cohere.App.renderAll();
@@ -193,12 +422,19 @@ Cohere.Members = (function () {
     function startEditOrg(id) {
         const org = Cohere.Store.getOrg(id);
         if (!org) return;
+        const isAdmin = Cohere.Permissions.can("manageOrgs");
+        pendingLogo = undefined;
         $("org-id").value = org.id;
         $("org-name").value = org.name;
         $("org-desc").value = org.description;
-        $("org-submit").textContent = "Update Organization";
+        $("org-name").disabled = !isAdmin;
+        $("org-desc").disabled = !isAdmin;
+        $("org-lock-hint").hidden = isAdmin;
+        $("org-panel-title").textContent = "Edit organization";
+        $("org-submit").textContent = isAdmin ? "Update Organization" : "Save logo";
         $("org-cancel").hidden = false;
-        $("org-name").focus();
+        renderLogoField();
+        if (isAdmin) $("org-name").focus();
     }
 
     function handleOrgDelete(id) {
@@ -217,10 +453,16 @@ Cohere.Members = (function () {
     function resetOrgForm() {
         const form = $("org-form");
         form.reset();
+        pendingLogo = undefined;
         $("org-id").value = "";
+        $("org-name").disabled = false;
+        $("org-desc").disabled = false;
+        $("org-lock-hint").hidden = true;
+        $("org-panel-title").textContent = "Add organization";
         $("org-submit").textContent = "Add Organization";
         $("org-cancel").hidden = true;
         Cohere.UI.clearFieldErrors(form);
+        renderLogoField();
     }
 
     // ---- Member form (President) --------------------------------------------
@@ -339,6 +581,7 @@ Cohere.Members = (function () {
     }
 
     function renderMemberTable() {
+        closeActionMenu(false);
         const tbody = $("member-table-body");
         Cohere.Utils.clearEl(tbody);
 
@@ -369,11 +612,9 @@ Cohere.Members = (function () {
             stTd.appendChild(Cohere.UI.statusBadge(st, st === "Active" ? "completed" : "default"));
             tr.appendChild(stTd);
 
-            const actionsTd = el("td");
+            const actionsTd = el("td", { className: "col-actions" });
             if (Cohere.Permissions.canManageMember(m)) {
-                actionsTd.appendChild(el("button", { textContent: "Edit", className: "btn btn-secondary", dataset: { action: "edit", id: m.id } }));
-                actionsTd.appendChild(el("button", { textContent: st === "Active" ? "Deactivate" : "Activate", className: "btn btn-secondary", style: "margin-left: 4px;", dataset: { action: "toggle", id: m.id } }));
-                actionsTd.appendChild(el("button", { textContent: "Delete", className: "btn btn-danger", style: "margin-left: 4px;", dataset: { action: "delete", id: m.id } }));
+                actionsTd.appendChild(kebabButton("Actions for " + m.fullName, { dataset: { id: m.id } }));
             } else {
                 actionsTd.textContent = "—";
             }
