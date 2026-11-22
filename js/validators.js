@@ -100,19 +100,19 @@ Cohere.Validators = (function () {
 
         // Title: required, 1-120 chars
         if (!title) {
-            errors["task-title"] = "Task title is required.";
-        } else if (title.length > 120) {
-            errors["task-title"] = "Title is too long (max 120).";
+            errors["task-title"] = "Task title is required (3–80 characters).";
+        } else if (title.length > 80) {
+            errors["task-title"] = "Title is too long (max 80).";
         }
 
         // Description: optional, up to 500 chars
-        if (description.length > 500) {
-            errors["task-description"] = "Description is too long (max 500).";
+        if (description.length > 300) {
+            errors["task-description"] = "Description is too long (max 300).";
         }
 
         // Assignee: required and must exist
         if (!assigneeId) {
-            errors["task-assigneeId"] = "Select an assignee.";
+            errors["task-assigneeId"] = "Choose who this task is assigned to.";
         } else if (!Cohere.Store.getMember(assigneeId)) {
             errors["task-assigneeId"] = "Select a valid assignee.";
         }

@@ -178,7 +178,7 @@ Cohere.Tasks = (function () {
 
         Cohere.UI.clearFieldErrors(form);
 
-        const validation = Cohere.Validators.validateTask(values);
+        const validation = Cohere.Validators.validateTask(values, editingId || null);
         if (!validation.valid) {
             Cohere.UI.showFieldErrors(form, validation.errors);
             return;
@@ -341,32 +341,36 @@ Cohere.Tasks = (function () {
 
             const actionsTd = Cohere.Utils.createEl("td");
 
+            // 1. Manage Tasks permissions (Edit / Delete)
             if (Cohere.Permissions.can("manageTasks")) {
                 const editBtn = Cohere.Utils.createEl("button", {
                     textContent: "Edit",
                     className: "btn btn-secondary",
                     dataset: { action: "edit", id: t.id }
                 });
-
-                const toggleLabel = t.status === "Completed" ? "Reopen" : "Complete";
-                const toggleBtn = Cohere.Utils.createEl("button", {
-                    textContent: toggleLabel,
-                    className: "btn",
-                    dataset: { action: "toggle", id: t.id },
-                    style: "margin-left: 4px;"
-                });
-
                 const deleteBtn = Cohere.Utils.createEl("button", {
                     textContent: "Delete",
                     className: "btn btn-danger",
                     dataset: { action: "delete", id: t.id },
                     style: "margin-left: 4px;"
                 });
-
                 actionsTd.appendChild(editBtn);
+                actionsTd.appendChild(deleteBtn, actionsTd);
+            }
+
+            // 2. canUpdateTask permission (Complete / Reopen)
+            if (Cohere.Permissions.canUpdateTask(t)) {
+                const toggleLabel = t.status === "Completed" ? "Reopen" : "Complete";
+                const toggleBtn = Cohere.Utils.createEl("button", {
+                    textContent: toggleLabel,
+                    className: "btn",
+                    dataset: { action: "toggle", id: t.id },
+                    style: (Cohere.Permissions.can("manageTasks") ? "margin-left: 4px;" : "")
+                });
                 actionsTd.appendChild(toggleBtn);
-                actionsTd.appendChild(deleteBtn);
-            } else {
+            }
+
+            if (!Cohere.Permissions.can("manageTasks") && !Cohere.Permissions.canUpdateTask(t)) {
                 actionsTd.textContent = "—";
             }
 

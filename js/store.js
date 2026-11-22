@@ -219,6 +219,10 @@ Cohere.Store = (function () {
         const task = getTask(id);
         if (!task) return { ok: false, error: "Task not found." };
 
+        if (!Cohere.Permissions.canUpdateTask(task)) {
+            return { ok: false, error: Cohere.Permissions.denyMessage("manageTasks") };
+        }
+
         if (!Cohere.Config.TASK_STATUSES.includes(status)) {
             return { ok: false, error: "Invalid status." };
         }
