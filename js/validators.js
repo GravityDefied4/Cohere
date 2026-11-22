@@ -63,11 +63,8 @@ Cohere.Validators = (function () {
         // Organization: required
         if (!orgId) {
             errors["member-orgId"] = "Select an organization.";
-        } else {
-            const org = Cohere.Store.getOrg(orgId);
-            if (!org) {
-                errors["member-orgId"] = "Select an organization.";
-            }
+        } else if (!Cohere.Store.getOrg(orgId)) {
+            errors["member-orgId"] = "Select an organization.";
         }
 
         // Position: required
@@ -88,5 +85,66 @@ Cohere.Validators = (function () {
         return { valid: Object.keys(errors).length === 0, errors: errors };
     }
 
-    return { validateOrg, validateMember };
+    // Validates task form values
+    function validateTask(values) {
+        const errors = {};
+        const title = (values.title || "").trim();
+        const description = (values.description || "").trim();
+        const assigneeId = values.assigneeId || "";
+        const priority = values.priority || "";
+        const deadline = values.deadline || "";
+        const status = values.status || "";
+        const completedAt = values.completedAt || "";
+
+        // Title: required, 1-120 chars
+        if (!title) {
+            errors["task-title"] = "Task title is required.";
+        } else if (title.length > 120) {
+            errors["task-title"] = "Title is too long (max 120).";
+        }
+
+        // Description: optional, up to 500 chars
+        if (description.length > 500) {
+            errors["task-description"] = "Description is too long (max 500).";
+        }
+
+        // Assignee: required and must exist
+        if (!assigneeId) {
+            errors["task-assigneeId"] = "Select an assignee.";
+        } else if (!Cohere.Store.getMember(assigneeId)) {
+            errors["task-assigneeId"] = "Select a valid assignee.";
+        }
+
+        // Priority: must be one of the config values
+        if (!priority || !Cohere.Config.PRIORITIES.includes(priority)) {
+            errors["task-priority"] = "Select a priority.";
+        }
+
+        // Deadline: required, valid ISO date
+        if (!deadline) {
+            errors["task-deadline"] = "Deadline is required.";
+        } else if (!Cohere.Utils.isValidISODate(deadline)) {
+            errors["task-deadline"] = "Enter a valid deadline.";
+        }
+
+        // Status: must be one of the config values
+        if (!status || !Cohere.Config.TASK_STATUSES.includes(status)) {
+            errors["task-status"] = "Select a status.";
+        }
+
+        // Completion date: required only when status is Completed
+        if (status === "Completed") {
+            if (!completedAt) {
+                errors["task-completedAt"] = "Enter the completion date.";
+            } else if (!Cohere.Utils.isValidISODate(completedAt)) {
+                errors["task-completedAt"] = "Enter a valid completion date.";
+            } else if (completedAt > Cohere.Utils.todayISO()) {
+                errors["task-completedAt"] = "Completion date cannot be in the future.";
+            }
+        }
+
+        return { valid: Object.keys(errors).length === 0, errors: errors };
+    }
+
+    return { validateOrg, validateMember, validateTask };
 })();

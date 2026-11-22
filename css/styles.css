@@ -431,7 +431,23 @@ th {
     margin-bottom: var(--space-3);
 }
 
-/* 6) Responsive */
+/* 6) M2 Tasks */
+#task-list tr.row-overdue td:first-child {
+    font-weight: 600;
+}
+
+#task-list tr td:last-child {
+    white-space: nowrap;
+}
+
+#task-completed-wrap {
+    padding: var(--space-2);
+    border-left: 3px solid var(--color-primary);
+    background: #eff6ff;
+    border-radius: var(--radius);
+}
+
+/* 7) Responsive */
 @media (max-width: 900px) {
     #btn-menu-toggle {
         display: block;

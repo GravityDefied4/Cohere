@@ -18,6 +18,11 @@ Cohere.Store = (function () {
         return m ? m.fullName : "Unknown officer";
     }
 
+    // Returns a task by ID
+    function getTask(id) {
+        return window.Cohere.state.tasks.find(function (t) { return t.id === id; }) || null;
+    }
+
     // Adds a new organization
     function addOrg(values) {
         if (!Cohere.Permissions.can("manageMembers")) {
@@ -158,5 +163,99 @@ Cohere.Store = (function () {
         return { ok: true, data: member };
     }
 
-    return { getOrg, getMember, getMemberName, addOrg, updateOrg, deleteOrg, addMember, updateMember, deleteMember };
+    // Adds a new task
+    function addTask(values) {
+        if (!Cohere.Permissions.can("manageTasks")) {
+            return { ok: false, error: Cohere.Permissions.denyMessage("manageTasks") };
+        }
+
+        const task = {
+            id: Cohere.Utils.generateId("task"),
+            title: values.title.trim(),
+            description: (values.description || "").trim(),
+            assigneeId: values.assigneeId,
+            priority: values.priority,
+            deadline: values.deadline,
+            status: values.status,
+            completedAt: values.status === "Completed" ? (values.completedAt || Cohere.Utils.todayISO()) : null,
+            createdAt: Cohere.Utils.todayISO()
+        };
+
+        window.Cohere.state.tasks.push(task);
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("task", "Created task \"" + task.title + "\"");
+
+        // Notify the assignee
+        Cohere.Notify.add("task", "You were assigned: \"" + task.title + "\"", task.assigneeId, task.id);
+
+        return { ok: true, data: task };
+    }
+
+    // Updates an existing task
+    function updateTask(id, values) {
+        if (!Cohere.Permissions.can("manageTasks")) {
+            return { ok: false, error: Cohere.Permissions.denyMessage("manageTasks") };
+        }
+
+        const task = getTask(id);
+        if (!task) return { ok: false, error: "Task not found." };
+
+        task.title = values.title.trim();
+        task.description = (values.description || "").trim();
+        task.assigneeId = values.assigneeId;
+        task.priority = values.priority;
+        task.deadline = values.deadline;
+        task.status = values.status;
+        task.completedAt = values.status === "Completed" ? (values.completedAt || Cohere.Utils.todayISO()) : null;
+
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("task", "Updated task \"" + task.title + "\"");
+
+        return { ok: true, data: task };
+    }
+
+    // Sets a task's status; clears completedAt when not Completed
+    function setTaskStatus(id, status, completedAt) {
+        const task = getTask(id);
+        if (!task) return { ok: false, error: "Task not found." };
+
+        if (!Cohere.Config.TASK_STATUSES.includes(status)) {
+            return { ok: false, error: "Invalid status." };
+        }
+
+        task.status = status;
+        if (status === "Completed") {
+            task.completedAt = completedAt || Cohere.Utils.todayISO();
+        } else {
+            task.completedAt = null;
+        }
+
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("task", "Marked task \"" + task.title + "\" as " + status + ".");
+
+        return { ok: true, data: task };
+    }
+
+    // Deletes a task
+    function deleteTask(id) {
+        if (!Cohere.Permissions.can("manageTasks")) {
+            return { ok: false, error: Cohere.Permissions.denyMessage("manageTasks") };
+        }
+
+        const task = getTask(id);
+        if (!task) return { ok: false, error: "Task not found." };
+
+        window.Cohere.state.tasks = window.Cohere.state.tasks.filter(function (t) { return t.id !== id; });
+        Cohere.Storage.saveAll();
+        Cohere.Activity.log("task", "Deleted task \"" + task.title + "\"");
+
+        return { ok: true, data: task };
+    }
+
+    return {
+        getOrg, getMember, getMemberName,
+        addOrg, updateOrg, deleteOrg,
+        addMember, updateMember, deleteMember,
+        getTask, addTask, updateTask, setTaskStatus, deleteTask
+    };
 })();
