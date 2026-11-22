@@ -228,7 +228,7 @@ Cohere.Tasks = (function () {
 
         if (result.ok) {
             Cohere.UI.showToast(
-                task.status === "Completed" ? "Task reopened." : "Task completed.",
+                task.status === "Completed" ? "Task completed." : "Task reopened.",
                 "success"
             );
             Cohere.App.renderAll();
