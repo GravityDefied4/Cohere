@@ -124,5 +124,96 @@ Cohere.Services = (function () {
         return stats;
     }
 
-    return { isOverdue, isOnTime, findConflicts, getOfficerStats, getAllStats };
+    // Returns a compact set of stats for the Dashboard view
+    function getDashboardStats() {
+        const state = window.Cohere.state;
+        const today = Cohere.Utils.todayISO();
+        const dueSoonEnd = Cohere.Utils.addDays(today, Cohere.Config.REMINDER_DAYS);
+        const nowIso = today; // date-only comparison for upcoming meetings
+
+        const tasks = state.tasks || [];
+        const appointments = state.appointments || [];
+        const members = state.members || [];
+
+        // Stat cards
+        const totalMembers = members.length;
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter(function (t) { return t.status === "Completed"; }).length;
+        const overdueTasks = tasks.filter(function (t) { return isOverdue(t); }).length;
+        const totalMeetings = appointments.length;
+        const upcomingMeetings = appointments.filter(function (a) {
+            return a.status === "Scheduled" && a.date >= nowIso;
+        }).length;
+
+        // Average attendance rate across officers (excluding nulls)
+        const officers = members.map(function (m) { return getOfficerStats(m.id); }).filter(Boolean);
+        const attendanceValues = officers
+            .map(function (o) { return o.attendanceRate; })
+            .filter(function (v) { return v !== null && v !== undefined; });
+        const averageAttendanceRate = attendanceValues.length
+            ? attendanceValues.reduce(function (a, b) { return a + b; }, 0) / attendanceValues.length
+            : null;
+
+        // Task status counts for the bars
+        const taskStatusCounts = { "Pending": 0, "In Progress": 0, "Completed": 0 };
+        tasks.forEach(function (t) {
+            if (taskStatusCounts[t.status] !== undefined) taskStatusCounts[t.status]++;
+        });
+
+        // Due soon: not completed, deadline within [today, today + REMINDER_DAYS]
+        const dueSoon = tasks
+            .filter(function (t) {
+                return t.status !== "Completed" &&
+                    t.deadline &&
+                    t.deadline >= today &&
+                    t.deadline <= dueSoonEnd;
+            })
+            .sort(function (a, b) { return (a.deadline || "").localeCompare(b.deadline || ""); })
+            .slice(0, 5);
+
+        // Upcoming meetings: scheduled, on/after today, sorted by date + startTime
+        const upcoming = appointments
+            .filter(function (a) { return a.status === "Scheduled" && a.date >= nowIso; })
+            .sort(function (a, b) {
+                if (a.date === b.date) return (a.startTime || "").localeCompare(b.startTime || "");
+                return (a.date || "").localeCompare(b.date || "");
+            })
+            .slice(0, 5);
+
+        // Top officers: overallScore != null, top 3 desc
+        const topOfficers = officers
+            .filter(function (o) { return o.overallScore !== null; })
+            .sort(function (a, b) { return b.overallScore - a.overallScore; })
+            .slice(0, 3);
+
+        // Recent activity: last 5
+        const recentActivity = (state.activity || []).slice(0, 5);
+
+        return {
+            totalMembers,
+            totalTasks,
+            completedTasks,
+            overdueTasks,
+            totalMeetings,
+            upcomingMeetings,
+            averageAttendanceRate,
+            taskStatusCounts,
+            dueSoon,
+            upcoming,
+            topOfficers,
+            recentActivity
+        };
+    }
+
+    // Returns a member's open/in-progress tasks, sorted by deadline asc, capped at 5
+    function getMyTasks(memberId) {
+        if (!memberId) return [];
+        const state = window.Cohere.state;
+        return (state.tasks || [])
+            .filter(function (t) { return t.assigneeId === memberId && t.status !== "Completed"; })
+            .sort(function (a, b) { return (a.deadline || "").localeCompare(b.deadline || ""); })
+            .slice(0, 5);
+    }
+
+    return { isOverdue, isOnTime, findConflicts, getOfficerStats, getAllStats, getDashboardStats, getMyTasks };
 })();
