@@ -88,6 +88,23 @@
             <symbol id="i-moon" viewBox="0 0 24 24">
                 <path d="M20 14.5A8.5 8.5 0 119.5 4a7 7 0 0010.5 10.5z" />
             </symbol>
+            <symbol id="i-check" viewBox="0 0 24 24">
+                <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </symbol>
+            <symbol id="i-cross" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M9 9l6 6M15 9l-6 6" />
+            </symbol>
+            <symbol id="i-shield" viewBox="0 0 24 24">
+                <path d="M12 3l7 3v5.5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z" />
+                <path d="M9 12l2.2 2.2L15 10" />
+            </symbol>
+            <symbol id="i-checkall" viewBox="0 0 24 24">
+                <path d="M2.5 12.5L6.5 16.5 14 8.5M10 16.5l1 1L21 7.5" />
+            </symbol>
+            <symbol id="i-undo" viewBox="0 0 24 24">
+                <path d="M4 9h10a6 6 0 010 12H9M4 9l4-4M4 9l4 4" />
+            </symbol>
             <symbol id="i-plus" viewBox="0 0 24 24">
                 <path d="M12 5v14M5 12h14" />
             </symbol>
@@ -464,16 +481,19 @@
                                 <div class="field"><label for="attendance-select">Select an event</label><select
                                         id="attendance-select"></select></div>
                                 <div id="attendance-summary"></div>
-                                <div data-permission="markAttendance" class="actions col"><button
-                                        id="btn-mark-all-present" class="btn">Mark All Present</button><button
-                                        id="btn-clear-attendance" class="btn btn-danger-o">Clear
-                                        Attendance</button><span id="attendance-actions-hint" hidden></span></div>
+                                <div class="att-focus" role="region" aria-label="Student attendance">
+                                    <div id="attendance-student"></div>
+                                </div>
                                 <p class="view-only-note" data-permission-note="markAttendance" hidden>You do not have
                                     permission to mark attendance.</p>
-                                <div id="attendance-rates"></div>
                             </div>
                             <div class="split-main">
-                                <h2 class="card-title">Student masterlist</h2>
+                                <div class="att-list-head">
+                                    <h2 class="card-title">Student masterlist</h2>
+                                    <div data-permission="markAttendance" class="actions att-bulk"><button
+                                            id="btn-mark-all-present" class="btn btn-secondary btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-checkall" /></svg>Mark all present</button><button
+                                            id="btn-clear-attendance" class="btn btn-danger-o btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-undo" /></svg>Clear</button><span id="attendance-actions-hint" hidden></span></div>
+                                </div>
                                 <div class="table-wrap">
                                     <table>
                                         <thead>
@@ -485,6 +505,10 @@
                                         <tbody id="attendance-table-body"></tbody>
                                     </table>
                                 </div>
+                                <details class="att-rates-details">
+                                    <summary>Overall attendance rates</summary>
+                                    <div id="attendance-rates"></div>
+                                </details>
                             </div>
                         </div>
                     </section>

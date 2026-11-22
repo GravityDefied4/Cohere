@@ -5,15 +5,46 @@ Cohere.Attendance = (function () {
     // Currently selected meeting id (module state, not persisted)
     let selectedAppointmentId = null;
 
+    // Currently active student (the one shown in the "Student attendance" card)
+    let activeMemberId = null;
+
+    // Current masterlist search text (module state, not persisted)
+    let searchQuery = "";
+
+    // Short "Ana Cruz marked Present" confirmation shown for a moment after marking,
+    // and a flag so the next student's card slides in (both are module state only)
+    let justMarked = "";
+    let justMarkedStatus = "";   // present | absent | excused: colors the flash on the marked student's ROW
+    let justMarkedMemberId = ""; // the student who was just marked (not the one now on the card)
+    let animateNextCard = false;
+    let justMarkedTimer = null;
+
+    function clearJustMarked() {
+        justMarked = "";
+        justMarkedStatus = "";
+        justMarkedMemberId = "";
+        if (justMarkedTimer) { clearTimeout(justMarkedTimer); justMarkedTimer = null; }
+    }
+
     // Initializes the attendance view (attach listeners once)
     function init() {
         const select = document.getElementById("attendance-select");
         if (select) {
             select.addEventListener("change", function () {
                 selectedAppointmentId = select.value || null;
+                clearJustMarked();
                 updateActionButtons();
                 renderAttendanceTable();
+                renderActiveStudent();
                 renderSummary();
+            });
+        }
+
+        const search = document.getElementById("attendance-search");
+        if (search) {
+            search.addEventListener("input", function () {
+                searchQuery = search.value;
+                renderAttendanceTable();
             });
         }
 
@@ -27,10 +58,26 @@ Cohere.Attendance = (function () {
             clearBtn.addEventListener("click", handleClearAttendance);
         }
 
-        // Delegated status buttons inside the attendance table
+        // Clicking (or pressing Enter/Space on) a masterlist row makes that student active
         const tbody = document.getElementById("attendance-table-body");
         if (tbody) {
             tbody.addEventListener("click", function (e) {
+                const row = e.target.closest("tr[data-member-id]");
+                if (row) setActiveMember(row.dataset.memberId);
+            });
+            tbody.addEventListener("keydown", function (e) {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                const row = e.target.closest("tr[data-member-id]");
+                if (!row) return;
+                e.preventDefault();
+                setActiveMember(row.dataset.memberId);
+            });
+        }
+
+        // Delegated status buttons inside the active student card
+        const studentBox = document.getElementById("attendance-student");
+        if (studentBox) {
+            studentBox.addEventListener("click", function (e) {
                 const btn = e.target.closest("[data-action='set-status']");
                 if (!btn) return;
                 const memberId = btn.dataset.memberId;
@@ -46,6 +93,7 @@ Cohere.Attendance = (function () {
         renderMeetingSelector();
         updateActionButtons();
         renderAttendanceTable();
+        renderActiveStudent();
         renderSummary();
         renderRates();
     }
@@ -182,7 +230,72 @@ Cohere.Attendance = (function () {
         return map;
     }
 
-    // Renders the attendance table (one row per invited member)
+    // Returns the member objects invited to the selected meeting (deleted members skipped)
+    function getInvitedMembers() {
+        const appt = getSelectedAppointment();
+        if (!appt) return [];
+        return (appt.memberIds || []).map(function (id) {
+            return Cohere.Store.getMember(id);
+        }).filter(Boolean).sort(function (a, b) {
+            // Masterlist is always alphabetical (A-Z) by full name
+            return String(a.fullName || "").localeCompare(String(b.fullName || ""), undefined, { sensitivity: "base" });
+        });
+    }
+
+    // Invited students that match the search box (name or student ID), still A-Z
+    function getVisibleMembers() {
+        const q = searchQuery.trim().toLowerCase();
+        const invited = getInvitedMembers();
+        if (!q) return invited;
+        return invited.filter(function (m) {
+            return String(m.fullName || "").toLowerCase().indexOf(q) !== -1 ||
+                String(m.studentId || "").toLowerCase().indexOf(q) !== -1;
+        });
+    }
+
+    // Returns the student that follows memberId in the visible masterlist (or null if last)
+    function getNextMember(memberId) {
+        const invited = getVisibleMembers();
+        const idx = invited.findIndex(function (m) { return m.id === memberId; });
+        return idx >= 0 && idx < invited.length - 1 ? invited[idx + 1] : null;
+    }
+
+    // Keeps the active row visible in the masterlist while moving through students
+    function scrollActiveRowIntoView() {
+        const row = document.querySelector("#attendance-table-body tr.is-active");
+        if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+    }
+
+    // Keeps activeMemberId valid: falls back to the first invited student
+    function ensureActiveMember() {
+        const invited = getInvitedMembers();
+        const stillInvited = invited.some(function (m) { return m.id === activeMemberId; });
+        if (!stillInvited) activeMemberId = invited.length ? invited[0].id : null;
+    }
+
+    // Makes a student the active one and refreshes the list highlight + card
+    function setActiveMember(memberId) {
+        if (!memberId || memberId === activeMemberId) return;
+        clearJustMarked();
+        activeMemberId = memberId;
+        renderAttendanceTable();
+        renderActiveStudent();
+        scrollActiveRowIntoView();
+    }
+
+    // "Present" -> "Present" label helper
+    function statusLabel(status) {
+        return status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unmarked";
+    }
+
+    // Builds a status badge (or an "Unmarked" badge when there is no record)
+    function buildStatusBadge(current) {
+        if (!current) return Cohere.UI.statusBadge("Unmarked", "pending");
+        const kind = current === "present" ? "present" : current === "absent" ? "absent" : "excused";
+        return Cohere.UI.statusBadge(statusLabel(current), kind);
+    }
+
+    // Renders the masterlist (one row per invited member). Rows are clickable.
     function renderAttendanceTable() {
         const tbody = document.getElementById("attendance-table-body");
         if (!tbody) return;
@@ -213,46 +326,138 @@ Cohere.Attendance = (function () {
             return;
         }
 
+        ensureActiveMember();
         const statusMap = getAttendanceMap(appt.id);
 
-        memberIds.forEach(function (memberId) {
-            const member = Cohere.Store.getMember(memberId);
-            if (!member) return; // member may have been deleted
-
+        const visible = getVisibleMembers();
+        if (visible.length === 0) {
             const tr = Cohere.Utils.createEl("tr");
+            tr.appendChild(Cohere.Utils.createEl("td", {
+                textContent: "No students match \u201C" + searchQuery.trim() + "\u201D.",
+                colSpan: "2",
+                className: "text-muted"
+            }));
+            tbody.appendChild(tr);
+            return;
+        }
+
+        visible.forEach(function (member) {
+            const isActive = member.id === activeMemberId;
+            const flash = member.id === justMarkedMemberId && justMarkedStatus;
+            const tr = Cohere.Utils.createEl("tr", {
+                className: (isActive ? "is-active" : "") + (flash ? " att-row-flash att-fx-" + justMarkedStatus : ""),
+                dataset: { memberId: member.id }
+            });
+            tr.tabIndex = 0;
+            tr.setAttribute("aria-selected", isActive ? "true" : "false");
+
             tr.appendChild(Cohere.Utils.createEl("td", { textContent: member.fullName }));
 
             const statusTd = Cohere.Utils.createEl("td");
-            const current = statusMap[memberId] || null;
-
-            if (Cohere.Permissions.can("markAttendance")) {
-                // Show buttons for users with permission
-                ["present", "absent", "excused"].forEach(function (status) {
-                    const isActive = current === status;
-                    const btn = Cohere.Utils.createEl("button", {
-                        textContent: status.charAt(0).toUpperCase() + status.slice(1),
-                        className: "btn " + (isActive ? "" : "btn-secondary"),
-                        dataset: { action: "set-status", memberId: memberId, status: status },
-                        style: "margin-right: 4px;"
-                    });
-                    statusTd.appendChild(btn);
-                });
-            } else {
-                // Show read-only badge for users without permission
-                if (current) {
-                    const kind = current === "present" ? "present" : current === "absent" ? "absent" : "excused";
-                    statusTd.appendChild(Cohere.UI.statusBadge(current.charAt(0).toUpperCase() + current.slice(1), kind));
-                } else {
-                    statusTd.appendChild(Cohere.UI.statusBadge("Unmarked", "pending"));
-                }
-            }
-
+            statusTd.appendChild(buildStatusBadge(statusMap[member.id] || null));
             tr.appendChild(statusTd);
             tbody.appendChild(tr);
         });
     }
 
-    // Renders the summary line (counts of present/absent/excused)
+    // Builds the initials shown in the avatar circle
+    function getInitials(name) {
+        const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return "?";
+        const first = parts[0].charAt(0);
+        const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
+        return (first + last).toUpperCase();
+    }
+
+    // Renders the "Student attendance" card for the active student
+    function renderActiveStudent() {
+        const box = document.getElementById("attendance-student");
+        if (!box) return;
+
+        Cohere.Utils.clearEl(box);
+
+        const appt = getSelectedAppointment();
+        ensureActiveMember();
+        const member = appt && activeMemberId ? Cohere.Store.getMember(activeMemberId) : null;
+
+        if (!member) {
+            const empty = Cohere.Utils.createEl("div", { className: "att-card att-empty" });
+            empty.appendChild(Cohere.Utils.createEl("p", {
+                className: "text-muted",
+                textContent: appt
+                    ? "No invited officers to show for this meeting."
+                    : "Select a meeting, then choose a student from the masterlist."
+            }));
+            box.appendChild(empty);
+            return;
+        }
+
+        const current = getAttendanceMap(appt.id)[member.id] || null;
+        const org = Cohere.Store.getOrg(member.orgId);
+
+        // Overall attendance rate for this student across all meetings
+        const mine = (window.Cohere.state.attendance || []).filter(function (r) {
+            return r.memberId === member.id;
+        });
+        const presentCount = mine.filter(function (r) { return r.status === "present"; }).length;
+        const rateText = mine.length
+            ? Cohere.Utils.formatPercent((presentCount / mine.length) * 100) + " (" + presentCount + " of " + mine.length + (mine.length === 1 ? " meeting)" : " meetings)")
+            : "No attendance recorded yet";
+
+        // Card: avatar + name + details + current status
+        const card = Cohere.Utils.createEl("div", { className: "att-card" + (animateNextCard ? " att-enter" : "") });
+        animateNextCard = false;
+        card.appendChild(Cohere.Utils.createEl("span", {
+            className: "att-avatar",
+            textContent: getInitials(member.fullName)
+        }));
+
+        const info = Cohere.Utils.createEl("div", { className: "att-info" });
+        const invited = getInvitedMembers();
+        const position = invited.findIndex(function (m) { return m.id === member.id; }) + 1;
+        const eyebrowDefault = "Now marking · Student " + position + " of " + invited.length;
+        const eyebrow = Cohere.Utils.createEl("p", {
+            className: "att-eyebrow" + (justMarked ? " att-eyebrow-saved" : ""),
+            textContent: justMarked ? "\u2713 " + justMarked : eyebrowDefault
+        });
+        eyebrow.dataset.default = eyebrowDefault;
+        eyebrow.setAttribute("role", "status");
+        info.appendChild(eyebrow);
+        const head = Cohere.Utils.createEl("div", { className: "att-head" });
+        head.appendChild(Cohere.Utils.createEl("h3", { className: "att-name", textContent: member.fullName }));
+        head.appendChild(buildStatusBadge(current));
+        info.appendChild(head);
+
+        const details = [
+            member.position + (org ? " · " + org.name : ""),
+            "ID " + member.studentId + (member.yearSection ? " · " + member.yearSection : "")
+        ];
+        details.forEach(function (line) {
+            info.appendChild(Cohere.Utils.createEl("p", { className: "att-details", textContent: line }));
+        });
+        info.appendChild(Cohere.Utils.createEl("p", { className: "att-details att-rate-line", textContent: "Overall: " + rateText }));
+        card.appendChild(info);
+        box.appendChild(card);
+
+        // Status choices (Present / Absent / Excused), only for users who may mark attendance
+        if (Cohere.Permissions.can("markAttendance")) {
+            const choices = Cohere.Utils.createEl("div", { className: "att-choices" });
+            ["present", "absent", "excused"].forEach(function (status) {
+                const isActive = current === status;
+                const btn = Cohere.Utils.createEl("button", {
+                    textContent: statusLabel(status),
+                    className: "btn att-choice" + (isActive ? "" : " btn-secondary"),
+                    dataset: { action: "set-status", memberId: member.id, status: status }
+                });
+                btn.type = "button";
+                btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+                choices.appendChild(btn);
+            });
+            box.appendChild(choices);
+        }
+    }
+
+    // Renders the summary: one progress bar ("3 of 4 marked") + a quiet legend of counts
     function renderSummary() {
         const box = document.getElementById("attendance-summary");
         if (!box) return;
@@ -260,32 +465,43 @@ Cohere.Attendance = (function () {
         Cohere.Utils.clearEl(box);
 
         const appt = getSelectedAppointment();
-        if (!appt) {
-            box.textContent = "";
-            return;
-        }
+        if (!appt) return;
 
-        const records = Cohere.Store.getAttendance(appt.id) || [];
-        const counts = { present: 0, absent: 0, excused: 0, unmarked: 0 };
-        const marked = {};
-        records.forEach(function (r) {
-            marked[r.memberId] = true;
-            if (counts[r.status] !== undefined) counts[r.status]++;
+        const invited = getInvitedMembers();
+        if (!invited.length) return;
+
+        const statusMap = getAttendanceMap(appt.id);
+        const counts = { present: 0, absent: 0, excused: 0 };
+        let marked = 0;
+        invited.forEach(function (m) {
+            const st = statusMap[m.id];
+            if (st && counts[st] !== undefined) { counts[st]++; marked++; }
         });
 
-        const invited = (appt.memberIds || []).filter(function (id) {
-            return Cohere.Store.getMember(id) !== null;
-        });
-        counts.unmarked = invited.length - Object.keys(marked).length;
-
-        box.appendChild(Cohere.Utils.createEl("div", {
-            textContent:
-                "Invited: " + invited.length +
-                " · Present: " + counts.present +
-                " · Absent: " + counts.absent +
-                " · Excused: " + counts.excused +
-                " · Unmarked: " + counts.unmarked
+        const top = Cohere.Utils.createEl("div", { className: "att-progress-top" });
+        top.appendChild(Cohere.Utils.createEl("strong", {
+            textContent: marked + " of " + invited.length + " marked"
         }));
+        box.appendChild(top);
+
+        const bar = Cohere.Utils.createEl("div", { className: "att-bar" });
+        bar.setAttribute("role", "progressbar");
+        bar.setAttribute("aria-valuemin", "0");
+        bar.setAttribute("aria-valuemax", String(invited.length));
+        bar.setAttribute("aria-valuenow", String(marked));
+        const fill = Cohere.Utils.createEl("span");
+        fill.style.width = Math.round((marked / invited.length) * 100) + "%";
+        bar.appendChild(fill);
+        box.appendChild(bar);
+
+        const legend = Cohere.Utils.createEl("div", { className: "att-legend" });
+        [["present", "Present"], ["absent", "Absent"], ["excused", "Excused"]].forEach(function (pair) {
+            const item = Cohere.Utils.createEl("span", { className: "att-legend-item" });
+            item.appendChild(Cohere.Utils.createEl("i", { className: "att-dot att-dot-" + pair[0] }));
+            item.appendChild(document.createTextNode(counts[pair[0]] + " " + pair[1]));
+            legend.appendChild(item);
+        });
+        box.appendChild(legend);
     }
 
     // Renders attendance rates per officer (aggregated across all past meetings)
@@ -312,9 +528,6 @@ Cohere.Attendance = (function () {
             if (r.status === "present") byMember[r.memberId].present++;
         });
 
-        const heading = Cohere.Utils.createEl("h3", { textContent: "Attendance rates" });
-        box.appendChild(heading);
-
         const table = Cohere.Utils.createEl("table");
         const thead = Cohere.Utils.createEl("thead");
         const headRow = Cohere.Utils.createEl("tr");
@@ -325,10 +538,12 @@ Cohere.Attendance = (function () {
         table.appendChild(thead);
 
         const tbody = Cohere.Utils.createEl("tbody");
-        Object.keys(byMember).forEach(function (memberId) {
-            const member = Cohere.Store.getMember(memberId);
-            if (!member) return;
-            const stats = byMember[memberId];
+        Object.keys(byMember).map(function (memberId) {
+            return Cohere.Store.getMember(memberId);
+        }).filter(Boolean).sort(function (a, b) {
+            return String(a.fullName || "").localeCompare(String(b.fullName || ""), undefined, { sensitivity: "base" });
+        }).forEach(function (member) {
+            const stats = byMember[member.id];
             const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
 
             const tr = Cohere.Utils.createEl("tr");
@@ -351,10 +566,40 @@ Cohere.Attendance = (function () {
 
         const result = Cohere.Store.setAttendance(appt.id, memberId, status);
         if (result.ok) {
-            Cohere.UI.showToast("Attendance marked.", "success");
+            // Move on to the next student in the alphabetical masterlist
+            const next = getNextMember(memberId);
+            const markedMember = Cohere.Store.getMember(memberId);
+            justMarked = (markedMember ? markedMember.fullName : "Student") + " marked " + statusLabel(status);
+            justMarkedStatus = status;
+            justMarkedMemberId = memberId;
+            if (next) {
+                // No toast per student: the card slides in and says who was just marked
+                activeMemberId = next.id;
+                animateNextCard = true;
+            } else {
+                Cohere.UI.showToast("Attendance marked for the last student in the list.", "success");
+            }
             renderAttendanceTable();
+            renderActiveStudent();
             renderSummary();
             renderRates();
+            scrollActiveRowIntoView();
+
+            // After a moment, the confirmation line goes back to "Now marking · Student X of N"
+            if (justMarkedTimer) clearTimeout(justMarkedTimer);
+            justMarkedTimer = setTimeout(function () {
+                justMarked = "";
+                justMarkedStatus = "";
+                justMarkedMemberId = "";
+                justMarkedTimer = null;
+                const flashRow = document.querySelector("#attendance-table-body tr.att-row-flash");
+                if (flashRow) flashRow.classList.remove("att-row-flash");
+                const el = document.querySelector("#attendance-student .att-eyebrow-saved");
+                if (el) {
+                    el.classList.remove("att-eyebrow-saved");
+                    el.textContent = el.dataset.default || "";
+                }
+            }, 2500);
         } else {
             Cohere.UI.showToast(result.error, "error");
         }
@@ -377,6 +622,7 @@ Cohere.Attendance = (function () {
         if (result.ok) {
             Cohere.UI.showToast("All officers marked present.", "success");
             renderAttendanceTable();
+            renderActiveStudent();
             renderSummary();
             renderRates();
         } else {
@@ -401,6 +647,7 @@ Cohere.Attendance = (function () {
         if (result.ok) {
             Cohere.UI.showToast("Attendance cleared.", "success");
             renderAttendanceTable();
+            renderActiveStudent();
             renderSummary();
             renderRates();
         } else {
