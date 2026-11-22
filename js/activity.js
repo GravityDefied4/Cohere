@@ -148,7 +148,7 @@ Cohere.Notify = (function () {
         Cohere.Utils.clearEl(list);
 
         if (notifications.length === 0) {
-            const empty = Cohere.Utils.createEl("li", { textContent: "No notifications yet.", className: "text-muted" });
+            const empty = Cohere.Utils.createEl("li", { textContent: "No notifications yet.", className: "text-muted", style: "padding: 8px;" });
             list.appendChild(empty);
             return;
         }
@@ -175,5 +175,47 @@ Cohere.Notify = (function () {
         });
     }
 
-    return { add, getVisible, getUnreadCount, markRead, markAllRead, togglePanel, renderPanel };
+    function init() {
+        // E05: Click one notification
+        const list = document.getElementById("notif-list");
+        if (list) {
+            list.addEventListener("click", function (e) {
+                const li = e.target.closest("li[data-id]");
+                if (li) {
+                    markRead(li.dataset.id);
+                    renderPanel();
+                }
+            });
+        }
+
+        // E06: Click "Mark all read"
+        const markAllBtn = document.getElementById("btn-mark-all-read");
+        if (markAllBtn) {
+            markAllBtn.addEventListener("click", function () {
+                markAllRead();
+                renderPanel();
+            });
+        }
+
+        // E04: Click the bell
+        const bellBtn = document.getElementById("btn-notifications");
+        if (bellBtn) {
+            bellBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                togglePanel();
+            });
+        }
+
+        // E37: Close panel when clicking outside
+        document.addEventListener("click", function (e) {
+            const panel = document.getElementById("notif-panel");
+            const bell = document.getElementById("btn-notifications");
+            if (panel && !panel.hidden && !panel.contains(e.target) && !bell.contains(e.target)) {
+                panel.hidden = true;
+            }
+        });
+    }
+
+    return { add, getVisible, getUnreadCount, markRead, markAllRead, togglePanel, renderPanel, init };
+
 })();

@@ -19,6 +19,13 @@ Cohere.Services = (function () {
         return task.completedAt <= task.deadline;
     }
 
+    // Returns the number of days between two ISO dates (to - from)
+    function daysBetween(fromISO, toISO) {
+        const a = new Date(fromISO);
+        const b = new Date(toISO);
+        return Math.round((b - a) / (1000 * 60 * 60 * 24));
+    }
+
     // Returns the list of appointments that conflict with the candidate
     function findConflicts(candidate, excludeId) {
         return window.Cohere.state.appointments.filter(function (a) {
@@ -215,5 +222,56 @@ Cohere.Services = (function () {
             .slice(0, 5);
     }
 
-    return { isOverdue, isOnTime, findConflicts, getOfficerStats, getAllStats, getDashboardStats, getMyTasks };
+    // Generates deadline reminders for tasks due within REMINDER_DAYS or overdue (M7)
+    function generateDeadlineReminders() {
+        const state = window.Cohere.state;
+        if (!state || !state.tasks) return;
+
+        const today = Cohere.Utils.todayISO();
+        const reminderDays = Cohere.Config.REMINDER_DAYS || 2;
+        const dueSoonEnd = Cohere.Utils.addDays(today, reminderDays);
+
+        state.tasks.forEach(function (task) {
+            if (task.status === "Completed" || !task.deadline) return;
+
+            let message = "";
+            if (task.deadline < today) {
+                message = "Task '" + task.title + "' is overdue.";
+            } else if (task.deadline <= dueSoonEnd) {
+                const daysUntil = daysBetween(today, task.deadline);
+                if (daysUntil === 0) {
+                    message = "Task '" + task.title + "' is due today.";
+                } else if (daysUntil === 1) {
+                    message = "Task '" + task.title + "' is due tomorrow.";
+                } else {
+                    message = "Task '" + task.title + "' is due in " + daysUntil + " days.";
+                }
+            } else {
+                return; // Not due soon
+            }
+
+            // Skip if a notification with the same refId, type "deadline" and same calendar date already exists
+            const alreadyNotified = state.notifications.some(function (n) {
+                return n.refId === task.id &&
+                    n.type === "deadline" &&
+                    n.timestamp.slice(0, 10) === today;
+            });
+
+            if (!alreadyNotified) {
+                Cohere.Notify.add("deadline", message, task.assigneeId, task.id);
+            }
+        });
+    }
+
+    return {
+        isOverdue,
+        isOnTime,
+        daysBetween,
+        findConflicts,
+        getOfficerStats,
+        getAllStats,
+        getDashboardStats,
+        getMyTasks,
+        generateDeadlineReminders
+    };
 })();

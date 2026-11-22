@@ -4,7 +4,7 @@ Cohere.App = (function () {
 
     // Initializes the app
     function init() {
-        // 1) Load state (stubbed for M0 since storage.js is not built yet)
+        // 1) Load state
         if (Cohere.Storage) {
             Cohere.Storage.loadAll();
         } else {
@@ -20,7 +20,7 @@ Cohere.App = (function () {
             };
         }
 
-        // 2) Seed data if needed (stubbed for M0)
+        // 2) Seed data if needed
         if (!window.Cohere.state.settings.seeded && Cohere.Seed) {
             const seedData = Cohere.Seed.generate();
             Object.assign(window.Cohere.state, seedData);
@@ -31,14 +31,19 @@ Cohere.App = (function () {
         // 3) Init permissions
         if (Cohere.Permissions) Cohere.Permissions.init();
 
-        // 4) Init views (stubbed for M0)
+        // 3.5) Init notifications (M7: attaches bell and panel listeners)
+        if (Cohere.Notify && typeof Cohere.Notify.init === "function") {
+            Cohere.Notify.init();
+        }
+
+        // 4) Init views
         const views = ["Dashboard", "Members", "Tasks", "Appointments", "Attendance", "Performance", "ActivityView", "Settings"];
         views.forEach(function (v) {
             if (Cohere[v] && typeof Cohere[v].init === "function") Cohere[v].init();
         });
 
-        // 5) Generate reminders (stubbed for M0)
-        if (Cohere.Services && Cohere.Services.generateDeadlineReminders) {
+        // 5) Generate deadline reminders (M7)
+        if (Cohere.Services && typeof Cohere.Services.generateDeadlineReminders === "function") {
             Cohere.Services.generateDeadlineReminders();
         }
 
@@ -74,7 +79,7 @@ Cohere.App = (function () {
             });
         }
 
-        // Temporary toast test for M0 done check
+        // Temporary toast test for M0 done check (Remove this in M10)
         const testToastBtn = document.getElementById("btn-test-toast");
         if (testToastBtn) {
             testToastBtn.addEventListener("click", function () {
