@@ -428,10 +428,6 @@
                                 <h2>Delegated Tasks</h2>
                                 <p class="task-sub">Assign work, set deadlines and keep track of what still needs doing.</p>
                             </div>
-                            <button type="button" class="btn" data-open="task-panel" data-permission="manageTasks"><svg
-                                    class="ic" aria-hidden="true">
-                                    <use href="#i-plus" />
-                                </svg>Add Task</button>
                         </div>
 
                         <section class="form-panel task-form-panel" id="task-panel" hidden>
@@ -470,7 +466,13 @@
                         <p class="view-only-note" data-permission-note="manageTasks" hidden>You have view-only access to tasks. Only
                             Presidents and Executives can assign, update or remove them.</p>
 
-                        <div id="task-tabs" class="task-tabs" role="group" aria-label="Filter by status"></div>
+                        <div class="task-status-row">
+                            <div id="task-tabs" class="task-tabs" role="group" aria-label="Filter by status"></div>
+                            <button type="button" class="btn" data-open="task-panel" data-permission="manageTasks"><svg
+                                    class="ic" aria-hidden="true">
+                                    <use href="#i-plus" />
+                                </svg>Add Task</button>
+                        </div>
 
                         <div class="task-toolbar">
                             <div class="search"><input type="search" id="task-search"
@@ -598,18 +600,27 @@
                                         <thead>
                                             <tr>
                                                 <th>Officer</th>
-                                                <th>Status</th>
+                                                <th>
+                                                    <div class="att-status-heading">
+                                                        <span>Status</span>
+                                                        <div class="att-menu" data-permission="markAttendance">
+                                                            <button type="button" class="att-menu-toggle" aria-label="Attendance actions" aria-expanded="false">
+                                                                <svg class="ic" aria-hidden="true"><use href="#i-more" /></svg>
+                                                            </button>
+                                                            <div class="att-menu-options" hidden>
+                                                                <button type="button" id="btn-mark-all-present">Mark all present</button>
+                                                                <button type="button" id="btn-clear-attendance">Clear all</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody id="attendance-table-body"></tbody>
                                     </table>
                                 </div>
                                 <div id="attendance-pagination" class="att-pagination" aria-label="Masterlist pages"></div>
-                                <div data-permission="markAttendance" class="actions att-bulk">
-                                    <button id="btn-mark-all-present" class="btn btn-secondary btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-checkall" /></svg>Mark all present</button>
-                                    <button id="btn-clear-attendance" class="btn btn-danger-o btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-undo" /></svg>Clear all</button>
-                                    <span id="attendance-actions-hint" hidden></span>
-                                </div>
+                                <span id="attendance-actions-hint" hidden></span>
                             </div>
                         </div>
                     </section>
@@ -634,7 +645,6 @@
                                 <tbody id="perf-table-body"></tbody>
                             </table>
                         </div>
-                        <div id="perf-detail"></div>
                     </section>
 
                     <section class="view" id="view-activity" hidden>
@@ -670,8 +680,11 @@
     <div id="toast-container" aria-live="polite"></div>
     <div id="modal-overlay" hidden>
         <div id="modal" role="dialog" aria-modal="true">
+            <button id="modal-close" class="icon-btn modal-close" type="button" aria-label="Close">
+                <svg class="ic" aria-hidden="true"><use href="#i-x" /></svg>
+            </button>
             <h2 id="modal-title"></h2>
-            <div id="modal-body"></div><button id="modal-close" class="btn btn-secondary">Close</button>
+            <div id="modal-body"></div>
         </div>
     </div>
 

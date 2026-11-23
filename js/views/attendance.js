@@ -63,6 +63,34 @@ Cohere.Attendance = (function () {
             clearBtn.addEventListener("click", handleClearAttendance);
         }
 
+        const menuToggle = document.querySelector(".att-menu-toggle");
+        const menuOptions = document.querySelector(".att-menu-options");
+        if (menuToggle && menuOptions) {
+            menuToggle.addEventListener("click", function (e) {
+                e.stopPropagation();
+                const open = menuOptions.hidden;
+                menuOptions.hidden = !open;
+                menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+            });
+            menuOptions.addEventListener("click", function () {
+                menuOptions.hidden = true;
+                menuToggle.setAttribute("aria-expanded", "false");
+            });
+            document.addEventListener("click", function (e) {
+                if (!e.target.closest(".att-menu")) {
+                    menuOptions.hidden = true;
+                    menuToggle.setAttribute("aria-expanded", "false");
+                }
+            });
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape") {
+                    menuOptions.hidden = true;
+                    menuToggle.setAttribute("aria-expanded", "false");
+                    menuToggle.focus();
+                }
+            });
+        }
+
         // Clicking (or pressing Enter/Space on) a masterlist row makes that student active
         const tbody = document.getElementById("attendance-table-body");
         if (tbody) {

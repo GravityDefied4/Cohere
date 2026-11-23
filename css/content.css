@@ -499,6 +499,16 @@
     border-radius: var(--ct-r-sm);
 }
 
+#modal .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+#modal {
+    position: relative;
+}
+
 /* 14) Small screens -------------------------------------------------------- */
 @media (max-width: 600px) {
 
@@ -876,78 +886,6 @@
     --st-excused-line: rgba(255, 216, 77, .42);
 }
 
-/* Buttons: unselected = colored icon, tinted hover. Selected = solid fill. */
-#main .att-choice[data-status="present"].btn-secondary .ic { color: var(--st-present-ink); }
-#main .att-choice[data-status="absent"].btn-secondary .ic { color: var(--st-absent-ink); }
-#main .att-choice[data-status="excused"].btn-secondary .ic { color: var(--st-excused-ink); }
-
-#main .att-choice[data-status="present"].btn-secondary:hover {
-    background: var(--st-present-tint);
-    border-color: var(--st-present-line);
-    color: var(--st-present-ink);
-}
-
-#main .att-choice[data-status="absent"].btn-secondary:hover {
-    background: var(--st-absent-tint);
-    border-color: var(--st-absent-line);
-    color: var(--st-absent-ink);
-}
-
-#main .att-choice[data-status="excused"].btn-secondary:hover {
-    background: var(--st-excused-tint);
-    border-color: var(--st-excused-line);
-    color: var(--st-excused-ink);
-}
-
-#main .att-choice[data-status="present"]:not(.btn-secondary) {
-    background: var(--st-present);
-    border-color: var(--st-present);
-    color: #fff;
-}
-
-#main .att-choice[data-status="present"],
-#main .att-choice[data-status="present"].btn-secondary {
-    background: var(--st-present);
-    border-color: var(--st-present);
-    color: #fff;
-}
-
-#main .att-choice[data-status="absent"],
-#main .att-choice[data-status="absent"].btn-secondary {
-    background: var(--ct-surface);
-    border-color: var(--ct-line);
-    color: var(--st-absent-ink);
-}
-
-#main .att-choice[data-status="absent"]:not(.btn-secondary) {
-    background: #fff;
-    border-color: var(--st-absent);
-    color: var(--st-absent-ink);
-    box-shadow: 0 0 0 2px var(--st-absent-tint);
-}
-
-#main .att-choice[data-status="excused"]:not(.btn-secondary) {
-    background: var(--st-excused);
-    border-color: var(--st-excused);
-    color: #2b2100;
-}
-
-#main .att-choice[data-status="present"].btn-secondary:hover,
-#main .att-choice[data-status="present"]:not(.btn-secondary):hover {
-    background: var(--st-present);
-    border-color: var(--st-present);
-    color: #fff;
-}
-
-#main .att-choice[data-status="absent"].btn-secondary,
-#main .att-choice[data-status="absent"].btn-secondary:hover,
-#main .att-choice[data-status="absent"]:not(.btn-secondary),
-#main .att-choice[data-status="absent"]:not(.btn-secondary):hover {
-    background: #fff;
-    border-color: var(--ct-line);
-    color: var(--st-absent-ink);
-}
-
 /* Badges (card + masterlist): same hues, soft tint */
 #main #attendance-table-body .badge-present,
 #main .att-head .badge-present {
@@ -1132,7 +1070,8 @@
 }
 
 #main .att-event-field select {
-    min-height: 52px;
+    height: 58px;
+    box-sizing: border-box;
     font-size: 1rem;
     font-weight: 600;
 }
@@ -1141,7 +1080,7 @@
     display: grid;
     grid-template-columns: 1fr;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
 }
 
 #main .att-name-search {
@@ -1152,7 +1091,8 @@
 
 #main .att-name-search input {
     width: 100%;
-    min-height: 44px;
+    height: 58px;
+    box-sizing: border-box;
     font-size: .88rem;
 }
 
@@ -1240,6 +1180,75 @@
     top: 0;
     z-index: 1;
     background: var(--ct-surface-2);
+}
+
+#main .att-status-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+#main .att-menu {
+    position: relative;
+    margin-left: auto;
+}
+
+#main .att-menu-toggle {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ct-muted);
+    cursor: pointer;
+}
+
+#main .att-menu-toggle:hover,
+#main .att-menu-toggle[aria-expanded="true"] {
+    background: var(--ct-line-soft);
+    color: var(--ct-text);
+}
+
+#main .att-menu-toggle .ic {
+    width: 18px;
+    height: 18px;
+}
+
+#main .att-menu-options {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 20;
+    min-width: 170px;
+    overflow: hidden;
+    border: 1px solid var(--ct-line);
+    border-radius: 10px;
+    background: var(--ct-surface);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .14);
+}
+
+#main .att-menu-options button {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    background: #fff;
+    color: var(--ct-text);
+    text-align: left;
+    font-size: .82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#main .att-menu-options button:hover,
+#main .att-menu-options button:active,
+#main .att-menu-options button:focus-visible {
+    background: var(--st-present);
+    color: #fff;
 }
 
 /* Rates: collapsed by default */
@@ -1466,4 +1475,16 @@
     background: var(--ct-surface-2);
     border-color: var(--ct-ink);
     color: var(--ct-text);
+}
+
+#main .att-choice[data-status="present"]:not(.btn-secondary),
+#main .att-choice[data-status="absent"]:not(.btn-secondary),
+#main .att-choice[data-status="excused"]:not(.btn-secondary),
+#main .att-choice[data-status="present"]:not(.btn-secondary):hover,
+#main .att-choice[data-status="absent"]:not(.btn-secondary):hover,
+#main .att-choice[data-status="excused"]:not(.btn-secondary):hover {
+    background: var(--st-present);
+    border-color: var(--st-present);
+    color: #fff;
+    box-shadow: none;
 }

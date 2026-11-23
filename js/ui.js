@@ -162,8 +162,17 @@ Cohere.UI = (function () {
 
     // Attach global listeners for modal/overlay close and field error clearing
     function attachGlobalListeners() {
+        const closeButton = document.getElementById("modal-close");
+        if (closeButton) {
+            closeButton.addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeModal();
+            });
+        }
+
         document.addEventListener("click", function (e) {
-            if (e.target.id === "modal-overlay" || e.target.id === "modal-close") {
+            if (e.target.id === "modal-overlay") {
                 closeModal();
             }
         });

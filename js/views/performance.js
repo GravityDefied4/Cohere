@@ -147,46 +147,30 @@ Cohere.Performance = (function () {
 
     // Renders the detail panel for the selected officer (with bars)
     function renderDetail() {
-        const box = document.getElementById("perf-detail");
-        if (!box) return;
-
-        Cohere.Utils.clearEl(box);
-
         if (!selectedMemberId) {
-            box.appendChild(Cohere.Utils.createEl("p", {
-                textContent: "Click an officer to see their breakdown.",
-                className: "text-muted"
-            }));
             return;
         }
 
         const stats = Cohere.Services.getOfficerStats(selectedMemberId);
         if (!stats) {
-            box.appendChild(Cohere.Utils.createEl("p", {
-                textContent: "Officer not found.",
-                className: "text-muted"
-            }));
             return;
         }
 
-        const heading = Cohere.Utils.createEl("h3", {
-            textContent: stats.fullName + " — " + stats.position
-        });
-        box.appendChild(heading);
+        const detail = Cohere.Utils.createEl("div", { className: "perf-detail-content" });
 
         const org = Cohere.Store.getOrg(stats.orgId);
-        box.appendChild(Cohere.Utils.createEl("p", {
+        detail.appendChild(Cohere.Utils.createEl("p", {
             textContent: "Organization: " + (org ? org.name : "Unknown") + " · Rating: " + stats.rating,
             className: "text-muted"
         }));
 
         // Bars
-        box.appendChild(buildBarRow("Task completion", stats.taskCompletionRate, "Completed " + stats.completed + " of " + stats.assigned + " assigned"));
-        box.appendChild(buildBarRow("On-time rate", stats.onTimeRate, stats.completedOnTime + " of " + stats.completed + " completed on time"));
-        box.appendChild(buildBarRow("Attendance rate", stats.attendanceRate, stats.present + " present, " + stats.absent + " absent, " + stats.excused + " excused"));
+        detail.appendChild(buildBarRow("Task completion", stats.taskCompletionRate, "Completed " + stats.completed + " of " + stats.assigned + " assigned"));
+        detail.appendChild(buildBarRow("On-time rate", stats.onTimeRate, stats.completedOnTime + " of " + stats.completed + " completed on time"));
+        detail.appendChild(buildBarRow("Attendance rate", stats.attendanceRate, stats.present + " present, " + stats.absent + " absent, " + stats.excused + " excused"));
 
         // Overall
-        box.appendChild(buildBarRow("Overall score", stats.overallScore, "Weighted average of the rates above"));
+        detail.appendChild(buildBarRow("Overall score", stats.overallScore, "Weighted average of the rates above"));
 
         // Task breakdown counts
         const counts = Cohere.Utils.createEl("p", {
@@ -196,7 +180,9 @@ Cohere.Performance = (function () {
                 stats.overdue + " overdue",
             className: "text-muted"
         });
-        box.appendChild(counts);
+        detail.appendChild(counts);
+
+        Cohere.UI.openModal(stats.fullName + " — " + stats.position, detail);
     }
 
     // Builds one bar row: label, bar, percent text, and an optional caption

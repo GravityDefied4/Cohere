@@ -66,6 +66,18 @@
 }
 
 /* 3) Status tabs ----------------------------------------------------------- */
+#main #view-tasks .task-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+#main #view-tasks .task-status-row > .btn {
+    flex: none;
+}
+
 #main #view-tasks .task-tabs {
     display: inline-flex;
     gap: 2px;
@@ -77,6 +89,10 @@
     max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
+}
+
+#main #view-tasks .task-status-row .task-tabs {
+    margin-bottom: 0;
 }
 
 #main #view-tasks .task-tabs::-webkit-scrollbar {
@@ -146,13 +162,18 @@
 }
 
 #main #view-tasks .task-toolbar .search {
-    flex: 1 1 260px;
-    max-width: 420px;
+    flex: 1 1 360px;
+    max-width: none;
+    margin-right: auto;
 }
 
 #main #view-tasks .task-toolbar>select {
     flex: 0 1 190px;
     min-width: 140px;
+}
+
+#main #view-tasks .task-toolbar #task-filter-assignee {
+    margin-left: 0;
 }
 
 /* 5) Delegation register (table) ------------------------------------------- */
@@ -340,6 +361,30 @@
     color: #ff9d94;
 }
 
+/* Softer status accents after the base badge rules. */
+#main #view-tasks .task-row.is-overdue {
+    box-shadow: inset 2px 0 0 var(--ct-danger-tint);
+}
+
+#main #view-tasks .badge-high {
+    background: rgba(198, 45, 36, .055);
+    color: var(--ct-danger);
+}
+
+#main #view-tasks .badge-medium {
+    background: rgba(214, 140, 20, .055);
+    color: var(--tk-warn);
+}
+
+#main #view-tasks .badge-low {
+    background: rgba(45, 133, 92, .055);
+    color: var(--ct-success);
+}
+
+#main #view-tasks .badge-progress {
+    background: rgba(78, 125, 200, .055);
+}
+
 /* View-only note (Members) */
 #main #view-tasks .view-only-note {
     margin-bottom: 16px;
@@ -382,6 +427,15 @@
 
 /* 7) Small screens: each row becomes a labelled block ---------------------- */
 @media (max-width: 720px) {
+    #main #view-tasks .task-status-row {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    #main #view-tasks .task-status-row > .btn {
+        margin-left: auto;
+    }
+
     #main #view-tasks .task-table thead {
         display: none;
     }
