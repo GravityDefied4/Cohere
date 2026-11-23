@@ -394,7 +394,7 @@ Cohere.Store = (function () {
         return { ok: true };
     }
 
-    // Marks every invited member of a meeting as present (only fills unmarked ones).
+    // Marks every invited member of a meeting as present, overriding any existing status.
     function markAllPresent(apptId) {
         if (!Cohere.Permissions.can("markAttendance")) {
             return { ok: false, error: Cohere.Permissions.denyMessage("markAttendance") };
@@ -407,14 +407,19 @@ Cohere.Store = (function () {
         let added = 0;
         (appt.memberIds || []).forEach(function (memberId) {
             if (!getMember(memberId)) return;
-            if (getAttendanceRecord(apptId, memberId)) return;
-            window.Cohere.state.attendance.push({
-                id: Cohere.Utils.generateId("att"),
-                appointmentId: apptId,
-                memberId: memberId,
-                status: "present",
-                markedAt: now
-            });
+            const existing = getAttendanceRecord(apptId, memberId);
+            if (existing) {
+                existing.status = "present";
+                existing.markedAt = now;
+            } else {
+                window.Cohere.state.attendance.push({
+                    id: Cohere.Utils.generateId("att"),
+                    appointmentId: apptId,
+                    memberId: memberId,
+                    status: "present",
+                    markedAt: now
+                });
+            }
             added++;
         });
 

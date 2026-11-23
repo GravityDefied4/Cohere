@@ -11,22 +11,22 @@ Cohere.Attendance = (function () {
     // Current masterlist search text (module state, not persisted)
     let searchQuery = "";
 
-    // Current masterlist status filter: "", "present", "absent", "excused", or "unmarked"
-    let statusFilter = "";
-
-    // Short "Ana Cruz marked Present" confirmation shown for a moment after marking,
-    // and a flag so the next student's card slides in (both are module state only)
-    let justMarked = "";
+    // Status and row flash shown briefly after marking.
     let justMarkedStatus = "";   // present | absent | excused: colors the flash on the marked student's ROW
     let justMarkedMemberId = ""; // the student who was just marked (not the one now on the card)
     let animateNextCard = false;
     let justMarkedTimer = null;
+    let statusAnimationTimer = null;
+    let statusAnimating = false;
+    const masterlistPageSize = 5;
+    let masterlistPage = 1;
 
     function clearJustMarked() {
-        justMarked = "";
         justMarkedStatus = "";
         justMarkedMemberId = "";
         if (justMarkedTimer) { clearTimeout(justMarkedTimer); justMarkedTimer = null; }
+        if (statusAnimationTimer) { clearTimeout(statusAnimationTimer); statusAnimationTimer = null; }
+        statusAnimating = false;
     }
 
     // Initializes the attendance view (attach listeners once)
@@ -35,6 +35,7 @@ Cohere.Attendance = (function () {
         if (select) {
             select.addEventListener("change", function () {
                 selectedAppointmentId = select.value || null;
+                masterlistPage = 1;
                 clearJustMarked();
                 updateActionButtons();
                 renderAttendanceTable();
@@ -47,14 +48,7 @@ Cohere.Attendance = (function () {
         if (search) {
             search.addEventListener("input", function () {
                 searchQuery = search.value;
-                renderAttendanceTable();
-            });
-        }
-
-        const filterStatus = document.getElementById("attendance-filter-status");
-        if (filterStatus) {
-            filterStatus.addEventListener("change", function () {
-                statusFilter = filterStatus.value;
+                masterlistPage = 1;
                 renderAttendanceTable();
             });
         }
@@ -106,7 +100,6 @@ Cohere.Attendance = (function () {
         renderAttendanceTable();
         renderActiveStudent();
         renderSummary();
-        renderRates();
     }
 
     // Returns true if the meeting is in the future (by date or today-but-ended)
@@ -255,8 +248,8 @@ Cohere.Attendance = (function () {
         });
     }
 
-    // Invited students that match the search box (name or student ID) and the
-    // status filter (present/absent/excused/unmarked), still A-Z. Open to everyone.
+    // Invited students that match the search box (name or student ID), still A-Z.
+    // Open to everyone.
     function getVisibleMembers() {
         const q = searchQuery.trim().toLowerCase();
         let list = getInvitedMembers();
@@ -265,15 +258,6 @@ Cohere.Attendance = (function () {
             list = list.filter(function (m) {
                 return String(m.fullName || "").toLowerCase().indexOf(q) !== -1 ||
                     String(m.studentId || "").toLowerCase().indexOf(q) !== -1;
-            });
-        }
-
-        if (statusFilter) {
-            const appt = getSelectedAppointment();
-            const statusMap = appt ? getAttendanceMap(appt.id) : {};
-            list = list.filter(function (m) {
-                const current = statusMap[m.id] || "unmarked";
-                return current === statusFilter;
             });
         }
 
@@ -305,6 +289,9 @@ Cohere.Attendance = (function () {
         if (!memberId || memberId === activeMemberId) return;
         clearJustMarked();
         activeMemberId = memberId;
+        const visible = getVisibleMembers();
+        const index = visible.findIndex(function (member) { return member.id === memberId; });
+        if (index >= 0) masterlistPage = Math.floor(index / masterlistPageSize) + 1;
         renderAttendanceTable();
         renderActiveStudent();
         scrollActiveRowIntoView();
@@ -322,23 +309,41 @@ Cohere.Attendance = (function () {
         return Cohere.UI.statusBadge(statusLabel(current), kind);
     }
 
+    function renderMasterlistPagination(totalMembers) {
+        const pagination = document.getElementById("attendance-pagination");
+        if (!pagination) return;
+
+        Cohere.Utils.clearEl(pagination);
+        const totalPages = Math.ceil(totalMembers / masterlistPageSize);
+        if (totalPages <= 1) {
+            pagination.hidden = true;
+            return;
+        }
+
+        pagination.hidden = false;
+        for (let page = 1; page <= totalPages; page++) {
+            const button = Cohere.Utils.createEl("button", {
+                textContent: String(page),
+                className: "att-page-btn" + (page === masterlistPage ? " is-active" : "")
+            });
+            button.type = "button";
+            button.setAttribute("aria-label", "Go to officer page " + page);
+            button.setAttribute("aria-current", page === masterlistPage ? "page" : "false");
+            button.addEventListener("click", function () {
+                masterlistPage = page;
+                renderAttendanceTable();
+            });
+            pagination.appendChild(button);
+        }
+    }
+
     // Renders the masterlist (one row per invited member). Rows are clickable.
     function renderAttendanceTable() {
         const tbody = document.getElementById("attendance-table-body");
         if (!tbody) return;
 
-        const filterStatus = document.getElementById("attendance-filter-status");
-        if (filterStatus && !filterStatus.options.length) {
-            Cohere.Utils.populateSelect(filterStatus, [
-                { value: "", label: "All statuses" },
-                { value: "present", label: "Present" },
-                { value: "absent", label: "Absent" },
-                { value: "excused", label: "Excused" },
-                { value: "unmarked", label: "Unmarked" }
-            ], null);
-        }
-
         Cohere.Utils.clearEl(tbody);
+        renderMasterlistPagination(0);
 
         const appt = getSelectedAppointment();
         if (!appt) {
@@ -381,7 +386,14 @@ Cohere.Attendance = (function () {
             return;
         }
 
-        visible.forEach(function (member) {
+        const totalPages = Math.ceil(visible.length / masterlistPageSize);
+        if (masterlistPage > totalPages) masterlistPage = totalPages;
+        if (masterlistPage < 1) masterlistPage = 1;
+        renderMasterlistPagination(visible.length);
+        const start = (masterlistPage - 1) * masterlistPageSize;
+        const pageMembers = visible.slice(start, start + masterlistPageSize);
+
+        pageMembers.forEach(function (member) {
             const isActive = member.id === activeMemberId;
             const flash = member.id === justMarkedMemberId && justMarkedStatus;
             const tr = Cohere.Utils.createEl("tr", {
@@ -435,15 +447,6 @@ Cohere.Attendance = (function () {
         const current = getAttendanceMap(appt.id)[member.id] || null;
         const org = Cohere.Store.getOrg(member.orgId);
 
-        // Overall attendance rate for this student across all meetings
-        const mine = (window.Cohere.state.attendance || []).filter(function (r) {
-            return r.memberId === member.id;
-        });
-        const presentCount = mine.filter(function (r) { return r.status === "present"; }).length;
-        const rateText = mine.length
-            ? Cohere.Utils.formatPercent((presentCount / mine.length) * 100) + " (" + presentCount + " of " + mine.length + (mine.length === 1 ? " meeting)" : " meetings)")
-            : "No attendance recorded yet";
-
         // Card: avatar + name + details + current status
         const card = Cohere.Utils.createEl("div", { className: "att-card" + (animateNextCard ? " att-enter" : "") });
         animateNextCard = false;
@@ -453,16 +456,6 @@ Cohere.Attendance = (function () {
         }));
 
         const info = Cohere.Utils.createEl("div", { className: "att-info" });
-        const invited = getInvitedMembers();
-        const position = invited.findIndex(function (m) { return m.id === member.id; }) + 1;
-        const eyebrowDefault = "Now marking · Student " + position + " of " + invited.length;
-        const eyebrow = Cohere.Utils.createEl("p", {
-            className: "att-eyebrow" + (justMarked ? " att-eyebrow-saved" : ""),
-            textContent: justMarked ? "\u2713 " + justMarked : eyebrowDefault
-        });
-        eyebrow.dataset.default = eyebrowDefault;
-        eyebrow.setAttribute("role", "status");
-        info.appendChild(eyebrow);
         const head = Cohere.Utils.createEl("div", { className: "att-head" });
         head.appendChild(Cohere.Utils.createEl("h3", { className: "att-name", textContent: member.fullName }));
         head.appendChild(buildStatusBadge(current));
@@ -470,12 +463,11 @@ Cohere.Attendance = (function () {
 
         const details = [
             member.position + (org ? " · " + org.name : ""),
-            "ID " + member.studentId + (member.yearSection ? " · " + member.yearSection : "")
+            "ID " + member.studentId
         ];
         details.forEach(function (line) {
             info.appendChild(Cohere.Utils.createEl("p", { className: "att-details", textContent: line }));
         });
-        info.appendChild(Cohere.Utils.createEl("p", { className: "att-details att-rate-line", textContent: "Overall: " + rateText }));
         card.appendChild(info);
         box.appendChild(card);
 
@@ -544,101 +536,62 @@ Cohere.Attendance = (function () {
         box.appendChild(legend);
     }
 
-    // Renders attendance rates per officer (aggregated across all past meetings)
-    function renderRates() {
-        const box = document.getElementById("attendance-rates");
-        if (!box) return;
-
-        Cohere.Utils.clearEl(box);
-
-        const allRecords = (window.Cohere.state.attendance || []);
-        if (allRecords.length === 0) {
-            box.appendChild(Cohere.Utils.createEl("p", {
-                textContent: "No attendance recorded yet.",
-                className: "text-muted"
-            }));
-            return;
-        }
-
-        // Group by member
-        const byMember = {};
-        allRecords.forEach(function (r) {
-            if (!byMember[r.memberId]) byMember[r.memberId] = { present: 0, total: 0 };
-            byMember[r.memberId].total++;
-            if (r.status === "present") byMember[r.memberId].present++;
-        });
-
-        const table = Cohere.Utils.createEl("table");
-        const thead = Cohere.Utils.createEl("thead");
-        const headRow = Cohere.Utils.createEl("tr");
-        headRow.appendChild(Cohere.Utils.createEl("th", { textContent: "Officer" }));
-        headRow.appendChild(Cohere.Utils.createEl("th", { textContent: "Present / Total" }));
-        headRow.appendChild(Cohere.Utils.createEl("th", { textContent: "Rate" }));
-        thead.appendChild(headRow);
-        table.appendChild(thead);
-
-        const tbody = Cohere.Utils.createEl("tbody");
-        Object.keys(byMember).map(function (memberId) {
-            return Cohere.Store.getMember(memberId);
-        }).filter(Boolean).sort(function (a, b) {
-            return String(a.fullName || "").localeCompare(String(b.fullName || ""), undefined, { sensitivity: "base" });
-        }).forEach(function (member) {
-            const stats = byMember[member.id];
-            const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
-
-            const tr = Cohere.Utils.createEl("tr");
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: member.fullName }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: stats.present + " / " + stats.total }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: Cohere.Utils.formatPercent(rate) }));
-            tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-
-        const wrap = Cohere.Utils.createEl("div", { className: "table-wrap" });
-        wrap.appendChild(table);
-        box.appendChild(wrap);
-    }
-
     // Sets a single officer's status for the selected meeting
     function handleSetStatus(memberId, status) {
         const appt = getSelectedAppointment();
         if (!appt) return;
+        if (statusAnimating) return;
 
         const result = Cohere.Store.setAttendance(appt.id, memberId, status);
         if (result.ok) {
             // Move on to the next student in the alphabetical masterlist
             const next = getNextMember(memberId);
-            const markedMember = Cohere.Store.getMember(memberId);
-            justMarked = (markedMember ? markedMember.fullName : "Student") + " marked " + statusLabel(status);
             justMarkedStatus = status;
             justMarkedMemberId = memberId;
-            if (next) {
-                // No toast per student: the card slides in and says who was just marked
-                activeMemberId = next.id;
-                animateNextCard = true;
-            } else {
-                Cohere.UI.showToast("Attendance marked for the last student in the list.", "success");
+
+            const card = document.querySelector("#attendance-student .att-card");
+            if (card) {
+                statusAnimating = true;
+                card.classList.remove("att-status-present", "att-status-absent", "att-status-excused");
+                card.classList.add("att-status-" + status);
+                if (next) card.classList.add("att-card-shuffle-out");
             }
+
             renderAttendanceTable();
-            renderActiveStudent();
             renderSummary();
-            renderRates();
             scrollActiveRowIntoView();
 
-            // After a moment, the confirmation line goes back to "Now marking · Student X of N"
+            if (statusAnimationTimer) clearTimeout(statusAnimationTimer);
+            statusAnimationTimer = setTimeout(function () {
+                if (next) {
+                    activeMemberId = next.id;
+                    const nextVisible = getVisibleMembers();
+                    const nextIndex = nextVisible.findIndex(function (member) { return member.id === next.id; });
+                    if (nextIndex >= 0) masterlistPage = Math.floor(nextIndex / masterlistPageSize) + 1;
+                    animateNextCard = true;
+                    renderAttendanceTable();
+                    renderActiveStudent();
+                    scrollActiveRowIntoView();
+                } else {
+                    const currentCard = document.querySelector("#attendance-student .att-card");
+                    if (currentCard) currentCard.classList.remove("att-status-" + status);
+                }
+                statusAnimating = false;
+                statusAnimationTimer = null;
+            }, next ? 520 : 900);
+
+            if (!next) {
+                Cohere.UI.showToast("Attendance marked for the last student in the list.", "success");
+            }
+
+            // Clear the brief row highlight after a moment.
             if (justMarkedTimer) clearTimeout(justMarkedTimer);
             justMarkedTimer = setTimeout(function () {
-                justMarked = "";
                 justMarkedStatus = "";
                 justMarkedMemberId = "";
                 justMarkedTimer = null;
                 const flashRow = document.querySelector("#attendance-table-body tr.att-row-flash");
                 if (flashRow) flashRow.classList.remove("att-row-flash");
-                const el = document.querySelector("#attendance-student .att-eyebrow-saved");
-                if (el) {
-                    el.classList.remove("att-eyebrow-saved");
-                    el.textContent = el.dataset.default || "";
-                }
             }, 2500);
         } else {
             Cohere.UI.showToast(result.error, "error");
@@ -664,7 +617,6 @@ Cohere.Attendance = (function () {
             renderAttendanceTable();
             renderActiveStudent();
             renderSummary();
-            renderRates();
         } else {
             Cohere.UI.showToast(result.error, "error");
         }
@@ -689,7 +641,6 @@ Cohere.Attendance = (function () {
             renderAttendanceTable();
             renderActiveStudent();
             renderSummary();
-            renderRates();
         } else {
             Cohere.UI.showToast(result.error, "error");
         }

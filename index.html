@@ -578,7 +578,7 @@
                     <section class="view" id="view-attendance" hidden>
                         <div class="split">
                             <div class="split-side">
-                                <div class="field"><label for="attendance-select">Select an event</label><select
+                                <div class="field att-event-field"><label for="attendance-select">Select an event</label><select
                                         id="attendance-select"></select></div>
                                 <div id="attendance-summary"></div>
                                 <div class="att-focus" role="region" aria-label="Student attendance">
@@ -588,10 +588,10 @@
                             <div class="split-main">
                                 <div class="att-list-head">
                                     <h2 class="card-title">Student masterlist</h2>
-                                    <select id="attendance-filter-status" aria-label="Filter by status"></select>
-                                    <div data-permission="markAttendance" class="actions att-bulk"><button
-                                            id="btn-mark-all-present" class="btn btn-secondary btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-checkall" /></svg>Mark all present</button><button
-                                            id="btn-clear-attendance" class="btn btn-danger-o btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-undo" /></svg>Clear</button><span id="attendance-actions-hint" hidden></span></div>
+                                    <div class="search att-name-search">
+                                        <input type="search" id="attendance-search" placeholder="Search student names"
+                                            aria-label="Search student names">
+                                    </div>
                                 </div>
                                 <div class="table-wrap">
                                     <table>
@@ -604,10 +604,12 @@
                                         <tbody id="attendance-table-body"></tbody>
                                     </table>
                                 </div>
-                                <details class="att-rates-details">
-                                    <summary>Overall attendance rates</summary>
-                                    <div id="attendance-rates"></div>
-                                </details>
+                                <div id="attendance-pagination" class="att-pagination" aria-label="Masterlist pages"></div>
+                                <div data-permission="markAttendance" class="actions att-bulk">
+                                    <button id="btn-mark-all-present" class="btn btn-secondary btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-checkall" /></svg>Mark all present</button>
+                                    <button id="btn-clear-attendance" class="btn btn-danger-o btn-sm"><svg class="ic" aria-hidden="true"><use href="#i-undo" /></svg>Clear all</button>
+                                    <span id="attendance-actions-hint" hidden></span>
+                                </div>
                             </div>
                         </div>
                     </section>
