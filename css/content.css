@@ -336,10 +336,46 @@
     box-shadow: inset 3px 0 0 var(--ct-accent);
 }
 
+#main #perf-table-body tr.is-top-performer:not(.is-active) {
+    background: color-mix(in srgb, var(--perf-rank-color) 5%, var(--ct-surface));
+    box-shadow: inset 3px 0 0 var(--perf-rank-color);
+}
+
+#main #perf-table-body tr.is-top-1 {
+    --perf-rank-color: #c58a16;
+}
+
+#main #perf-table-body tr.is-top-2 {
+    --perf-rank-color: #7c8798;
+}
+
+#main #perf-table-body tr.is-top-3 {
+    --perf-rank-color: #a7663c;
+}
+
+#main #perf-table-body tr.is-top-4,
+#main #perf-table-body tr.is-top-5 {
+    --perf-rank-color: var(--ct-accent);
+}
+
 #main .perf-person {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+}
+
+#main .perf-rank {
+    display: grid;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 1px solid color-mix(in srgb, var(--perf-rank-color) 30%, transparent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--perf-rank-color) 12%, var(--ct-surface));
+    color: var(--perf-rank-color);
+    font-size: .68rem;
+    font-weight: 800;
 }
 
 #main .perf-avatar {

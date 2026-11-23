@@ -148,6 +148,16 @@ Cohere.Performance = (function () {
         Cohere.Utils.clearEl(tbody);
 
         const stats = applySort(getStatsForView());
+        const rankByMemberId = new Map();
+        stats.filter(function (s) {
+            return s.overallScore !== null && s.overallScore !== undefined;
+        }).slice().sort(function (a, b) {
+            const scoreDifference = b.overallScore - a.overallScore;
+            if (scoreDifference !== 0) return scoreDifference;
+            return (a.fullName || "").localeCompare(b.fullName || "");
+        }).forEach(function (s, index) {
+            rankByMemberId.set(s.memberId, index + 1);
+        });
         renderSummary(stats);
         updateSortHeaders();
 
@@ -163,14 +173,24 @@ Cohere.Performance = (function () {
         }
 
         stats.forEach(function (s) {
+            const rank = rankByMemberId.get(s.memberId);
+            const isTopFive = rank && rank <= 5;
             const tr = Cohere.Utils.createEl("tr", {
                 dataset: { memberId: s.memberId },
+                className: isTopFive ? "is-top-performer is-top-" + rank : "",
                 tabindex: "0",
-                "aria-label": "View performance for " + s.fullName
+                "aria-label": (isTopFive ? "Rank " + rank + ". " : "") + "View performance for " + s.fullName
             });
 
             const nameCell = Cohere.Utils.createEl("td");
             const identity = Cohere.Utils.createEl("div", { className: "perf-person" });
+            if (isTopFive) {
+                identity.appendChild(Cohere.Utils.createEl("span", {
+                    className: "perf-rank perf-rank-" + rank,
+                    textContent: String(rank),
+                    "aria-label": "Rank " + rank
+                }));
+            }
             const initials = (s.fullName || "?").split(/\s+/).map(function (part) {
                 return part.charAt(0);
             }).slice(0, 2).join("").toUpperCase();
