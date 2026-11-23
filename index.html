@@ -626,12 +626,34 @@
                     </section>
 
                     <section class="view" id="view-performance" hidden>
-                        <div class="toolbar">
-                            <div class="field inline"><label for="perf-org-filter">Select an office or
-                                    committee</label><select id="perf-org-filter"></select></div><small
-                                class="muted">Click an officer’s row to see the performance breakdown.</small>
+                        <div class="perf-toolbar">
+                            <div>
+                                <span class="perf-eyebrow">Organization</span>
+                                <div class="field inline perf-filter"><label class="sr-only"
+                                        for="perf-org-filter">Office or committee</label><select
+                                        id="perf-org-filter"></select></div>
+                            </div>
+                            <p class="perf-toolbar-note">Select an officer to view their performance details.</p>
                         </div>
-                        <div class="table-wrap">
+                        <div class="perf-summary" aria-label="Performance summary">
+                            <article class="perf-stat">
+                                <span class="perf-stat-label">Officers</span>
+                                <strong id="perf-stat-officers" class="perf-stat-value">0</strong>
+                            </article>
+                            <article class="perf-stat">
+                                <span class="perf-stat-label">Average score</span>
+                                <strong id="perf-stat-average" class="perf-stat-value">N/A</strong>
+                            </article>
+                            <article class="perf-stat">
+                                <span class="perf-stat-label">Top performer</span>
+                                <strong id="perf-stat-top" class="perf-stat-value perf-stat-name">N/A</strong>
+                            </article>
+                            <article class="perf-stat perf-stat-alert">
+                                <span class="perf-stat-label">Needs attention</span>
+                                <strong id="perf-stat-alert" class="perf-stat-value">0</strong>
+                            </article>
+                        </div>
+                        <div class="table-wrap perf-table-wrap">
                             <table>
                                 <thead>
                                     <tr>

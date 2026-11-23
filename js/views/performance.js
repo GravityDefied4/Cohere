@@ -34,6 +34,8 @@ Cohere.Performance = (function () {
             });
         }
 
+        updateSortHeaders();
+
         // Row click -> detail panel (delegated)
         if (tbody) {
             tbody.addEventListener("click", function (e) {
@@ -42,12 +44,40 @@ Cohere.Performance = (function () {
                 const id = row.getAttribute("data-member-id");
                 selectedMemberId = id;
                 renderDetail();
-                // Highlight selected row
-                tbody.querySelectorAll("tr").forEach(function (tr) {
-                    tr.style.fontWeight = tr.getAttribute("data-member-id") === id ? "600" : "";
-                });
+                updateSelectedRow();
+            });
+            tbody.addEventListener("keydown", function (e) {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                const row = e.target.closest("tr[data-member-id]");
+                if (!row) return;
+                e.preventDefault();
+                selectedMemberId = row.getAttribute("data-member-id");
+                renderDetail();
+                updateSelectedRow();
             });
         }
+    }
+
+    function updateSortHeaders() {
+        const table = document.querySelector("#view-performance table");
+        if (!table) return;
+        table.querySelectorAll("thead th[data-sort]").forEach(function (th) {
+            const key = th.getAttribute("data-sort");
+            th.classList.toggle("is-sorted", key === sortKey);
+            th.setAttribute("aria-sort", key === sortKey
+                ? (sortDir === "asc" ? "ascending" : "descending")
+                : "none");
+        });
+    }
+
+    function updateSelectedRow() {
+        const tbody = document.getElementById("perf-table-body");
+        if (!tbody) return;
+        tbody.querySelectorAll("tr[data-member-id]").forEach(function (tr) {
+            const active = tr.getAttribute("data-member-id") === selectedMemberId;
+            tr.classList.toggle("is-active", active);
+            tr.setAttribute("aria-selected", active ? "true" : "false");
+        });
     }
 
     // Renders the entire performance view
@@ -118,31 +148,102 @@ Cohere.Performance = (function () {
         Cohere.Utils.clearEl(tbody);
 
         const stats = applySort(getStatsForView());
+        renderSummary(stats);
+        updateSortHeaders();
 
         if (stats.length === 0) {
             const tr = Cohere.Utils.createEl("tr");
             tr.appendChild(Cohere.Utils.createEl("td", {
                 textContent: "No officers to display.",
                 colSpan: "5",
-                className: "text-muted"
+                className: "perf-empty"
             }));
             tbody.appendChild(tr);
             return;
         }
 
         stats.forEach(function (s) {
-            const tr = Cohere.Utils.createEl("tr", { dataset: { memberId: s.memberId } });
-            tr.style.cursor = "pointer";
+            const tr = Cohere.Utils.createEl("tr", {
+                dataset: { memberId: s.memberId },
+                tabindex: "0",
+                "aria-label": "View performance for " + s.fullName
+            });
 
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: s.fullName }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: Cohere.Utils.formatPercent(s.taskCompletionRate) }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: Cohere.Utils.formatPercent(s.onTimeRate) }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: Cohere.Utils.formatPercent(s.attendanceRate) }));
-            tr.appendChild(Cohere.Utils.createEl("td", { textContent: Cohere.Utils.formatPercent(s.overallScore) }));
+            const nameCell = Cohere.Utils.createEl("td");
+            const identity = Cohere.Utils.createEl("div", { className: "perf-person" });
+            const initials = (s.fullName || "?").split(/\s+/).map(function (part) {
+                return part.charAt(0);
+            }).slice(0, 2).join("").toUpperCase();
+            identity.appendChild(Cohere.Utils.createEl("span", {
+                className: "perf-avatar",
+                textContent: initials,
+                "aria-hidden": "true"
+            }));
+            const identityText = Cohere.Utils.createEl("div", { className: "perf-person-text" });
+            identityText.appendChild(Cohere.Utils.createEl("strong", { textContent: s.fullName }));
+            identityText.appendChild(Cohere.Utils.createEl("span", { textContent: s.position || "Officer" }));
+            identity.appendChild(identityText);
+            nameCell.appendChild(identity);
+            tr.appendChild(nameCell);
 
-            if (s.memberId === selectedMemberId) tr.style.fontWeight = "600";
+            tr.appendChild(buildMetricCell(s.taskCompletionRate));
+            tr.appendChild(buildMetricCell(s.onTimeRate));
+            tr.appendChild(buildMetricCell(s.attendanceRate));
+
+            const scoreCell = Cohere.Utils.createEl("td");
+            const score = Cohere.Utils.createEl("span", {
+                className: "perf-score " + getScoreClass(s.overallScore),
+                textContent: Cohere.Utils.formatPercent(s.overallScore)
+            });
+            scoreCell.appendChild(score);
+            tr.appendChild(scoreCell);
+
             tbody.appendChild(tr);
         });
+        updateSelectedRow();
+    }
+
+    function buildMetricCell(value) {
+        const td = Cohere.Utils.createEl("td", { className: "perf-metric" });
+        const valueRow = Cohere.Utils.createEl("div", { className: "perf-metric-value" });
+        valueRow.appendChild(Cohere.Utils.createEl("strong", {
+            textContent: Cohere.Utils.formatPercent(value)
+        }));
+        td.appendChild(valueRow);
+        if (value !== null && value !== undefined) {
+            const track = Cohere.Utils.createEl("div", { className: "perf-mini-bar", "aria-hidden": "true" });
+            const fill = Cohere.Utils.createEl("span", { className: "perf-mini-fill " + getScoreClass(value) });
+            fill.style.width = Math.max(0, Math.min(100, value)) + "%";
+            track.appendChild(fill);
+            td.appendChild(track);
+        }
+        return td;
+    }
+
+    function getScoreClass(value) {
+        if (value === null || value === undefined) return "score-none";
+        if (value >= 90) return "score-excellent";
+        if (value >= 75) return "score-good";
+        if (value >= 50) return "score-fair";
+        return "score-low";
+    }
+
+    function renderSummary(stats) {
+        const scored = stats.filter(function (s) {
+            return s.overallScore !== null && s.overallScore !== undefined;
+        });
+        const average = scored.length
+            ? scored.reduce(function (sum, s) { return sum + s.overallScore; }, 0) / scored.length
+            : null;
+        const top = scored.length ? scored.slice().sort(function (a, b) {
+            return b.overallScore - a.overallScore;
+        })[0] : null;
+        const needsAttention = scored.filter(function (s) { return s.overallScore < 50; }).length;
+
+        document.getElementById("perf-stat-officers").textContent = stats.length;
+        document.getElementById("perf-stat-average").textContent = Cohere.Utils.formatPercent(average);
+        document.getElementById("perf-stat-top").textContent = top ? top.fullName : "N/A";
+        document.getElementById("perf-stat-alert").textContent = needsAttention;
     }
 
     // Renders the detail panel for the selected officer (with bars)
@@ -159,41 +260,83 @@ Cohere.Performance = (function () {
         const detail = Cohere.Utils.createEl("div", { className: "perf-detail-content" });
 
         const org = Cohere.Store.getOrg(stats.orgId);
-        detail.appendChild(Cohere.Utils.createEl("p", {
-            textContent: "Organization: " + (org ? org.name : "Unknown") + " · Rating: " + stats.rating,
-            className: "text-muted"
+        const header = Cohere.Utils.createEl("div", { className: "perf-detail-header" });
+        const initials = (stats.fullName || "?").split(/\s+/).map(function (part) {
+            return part.charAt(0);
+        }).slice(0, 2).join("").toUpperCase();
+        const identity = Cohere.Utils.createEl("div", { className: "perf-detail-identity" });
+        identity.appendChild(Cohere.Utils.createEl("span", {
+            className: "perf-detail-avatar",
+            textContent: initials,
+            "aria-hidden": "true"
         }));
+        const identityText = Cohere.Utils.createEl("div", { className: "perf-detail-identity-text" });
+        identityText.appendChild(Cohere.Utils.createEl("strong", {
+            textContent: stats.position || "Officer",
+            className: "perf-detail-position"
+        }));
+        identityText.appendChild(Cohere.Utils.createEl("span", {
+            textContent: org ? org.name : "Unknown organization",
+            className: "perf-detail-org"
+        }));
+        identity.appendChild(identityText);
+        header.appendChild(identity);
+        const rating = Cohere.Utils.createEl("div", { className: "perf-rating-wrap" });
+        rating.appendChild(Cohere.Utils.createEl("span", {
+            textContent: "Overall rating",
+            className: "perf-rating-label"
+        }));
+        rating.appendChild(Cohere.Utils.createEl("span", {
+            textContent: stats.rating,
+            className: "perf-rating " + getScoreClass(stats.overallScore)
+        }));
+        header.appendChild(rating);
+        detail.appendChild(header);
 
-        // Bars
-        detail.appendChild(buildBarRow("Task completion", stats.taskCompletionRate, "Completed " + stats.completed + " of " + stats.assigned + " assigned"));
-        detail.appendChild(buildBarRow("On-time rate", stats.onTimeRate, stats.completedOnTime + " of " + stats.completed + " completed on time"));
-        detail.appendChild(buildBarRow("Attendance rate", stats.attendanceRate, stats.present + " present, " + stats.absent + " absent, " + stats.excused + " excused"));
+        detail.appendChild(Cohere.Utils.createEl("h3", {
+            textContent: "Performance snapshot",
+            className: "perf-detail-section-title"
+        }));
+        const metrics = Cohere.Utils.createEl("div", { className: "perf-detail-grid" });
+        metrics.appendChild(buildDetailMetric("Overall score", stats.overallScore));
+        metrics.appendChild(buildDetailMetric("Task completion", stats.taskCompletionRate));
+        metrics.appendChild(buildDetailMetric("On-time", stats.onTimeRate));
+        metrics.appendChild(buildDetailMetric("Attendance", stats.attendanceRate));
+        detail.appendChild(metrics);
 
-        // Overall
-        detail.appendChild(buildBarRow("Overall score", stats.overallScore, "Weighted average of the rates above"));
+        detail.appendChild(Cohere.Utils.createEl("h3", {
+            textContent: "Rate breakdown",
+            className: "perf-detail-section-title perf-breakdown-title"
+        }));
+        const breakdown = Cohere.Utils.createEl("div", { className: "perf-breakdown" });
+        breakdown.appendChild(buildBarRow("Task completion", stats.taskCompletionRate, "Completed " + stats.completed + " of " + stats.assigned + " assigned"));
+        breakdown.appendChild(buildBarRow("On-time rate", stats.onTimeRate, stats.completedOnTime + " of " + stats.completed + " completed on time"));
+        breakdown.appendChild(buildBarRow("Attendance rate", stats.attendanceRate, stats.present + " present, " + stats.absent + " absent, " + stats.excused + " excused"));
+        detail.appendChild(breakdown);
 
-        // Task breakdown counts
-        const counts = Cohere.Utils.createEl("p", {
-            textContent:
-                "Tasks: " + stats.assigned + " assigned · " +
-                stats.completed + " completed · " +
-                stats.overdue + " overdue",
-            className: "text-muted"
-        });
-        detail.appendChild(counts);
+        Cohere.UI.openModal(stats.fullName, detail);
+        const modal = document.getElementById("modal");
+        if (modal) modal.classList.add("perf-modal");
+    }
 
-        Cohere.UI.openModal(stats.fullName + " — " + stats.position, detail);
+    function buildDetailMetric(label, value) {
+        const card = Cohere.Utils.createEl("div", { className: "perf-detail-metric" });
+        card.appendChild(Cohere.Utils.createEl("span", { textContent: label }));
+        card.appendChild(Cohere.Utils.createEl("strong", {
+            textContent: Cohere.Utils.formatPercent(value),
+            className: getScoreClass(value)
+        }));
+        return card;
     }
 
     // Builds one bar row: label, bar, percent text, and an optional caption
     function buildBarRow(label, value, caption) {
-        const wrap = Cohere.Utils.createEl("div", { style: "margin-bottom: 12px;" });
+        const wrap = Cohere.Utils.createEl("div", { className: "perf-bar-row" });
 
-        const labelEl = Cohere.Utils.createEl("div", {
-            textContent: label + ": " + Cohere.Utils.formatPercent(value),
-            style: "font-weight: 500; margin-bottom: 4px;"
-        });
-        wrap.appendChild(labelEl);
+        const labelRow = Cohere.Utils.createEl("div", { className: "perf-bar-label" });
+        labelRow.appendChild(Cohere.Utils.createEl("span", { textContent: label }));
+        labelRow.appendChild(Cohere.Utils.createEl("strong", { textContent: Cohere.Utils.formatPercent(value) }));
+        wrap.appendChild(labelRow);
 
         const bar = Cohere.Utils.createEl("div", { className: "bar" });
         const fill = Cohere.Utils.createEl("div", { className: "bar-fill" });
@@ -205,8 +348,7 @@ Cohere.Performance = (function () {
         if (caption) {
             wrap.appendChild(Cohere.Utils.createEl("div", {
                 textContent: caption,
-                className: "text-muted",
-                style: "font-size: 0.75rem; margin-top: 4px;"
+                className: "perf-bar-caption"
             }));
         }
 

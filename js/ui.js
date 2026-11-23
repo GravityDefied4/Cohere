@@ -73,6 +73,8 @@ Cohere.UI = (function () {
         const titleEl = document.getElementById("modal-title");
         const bodyEl = document.getElementById("modal-body");
         if (!overlay || !titleEl || !bodyEl) return;
+        const modal = document.getElementById("modal");
+        if (modal) modal.classList.remove("perf-modal");
         titleEl.textContent = title;
         Cohere.Utils.clearEl(bodyEl);
         if (contentNode) bodyEl.appendChild(contentNode);
